@@ -1,8 +1,15 @@
 import { Router } from 'express';
-import { createPaymentIntent } from '../controllers/paymentController.js';
-import { protect } from '../middleware/authMiddleware.js';
+import {
+  createPaymentIntent,
+  completeOrder,
+  completeDemoOrder
+} from '../controllers/paymentController.js';
+import { optionalAuth } from '../middleware/optionalAuth.js';
 
 const r = Router();
-// Allows guest checkout — wrap with `protect` to require auth.
-r.post('/create-payment-intent', createPaymentIntent);
+
+r.post('/create-payment-intent', optionalAuth, createPaymentIntent);
+r.post('/complete-order', optionalAuth, completeOrder);
+r.post('/demo-order', optionalAuth, completeDemoOrder);
+
 export default r;

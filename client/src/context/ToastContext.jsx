@@ -25,13 +25,14 @@ export function ToastProvider({ children }) {
             <motion.div
               key={toast.id}
               layout
-              initial={{ opacity: 0, y: 50, scale: 0.9 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl shadow-2xl border text-sm font-medium
-                ${toast.type === 'success' ? 'bg-ink-900 text-green-400 border-green-500/20' : 
-                  toast.type === 'error' ? 'bg-ink-900 text-red-400 border-red-500/20' : 
-                  'bg-ink-900 text-blue-400 border-blue-500/20'}`}
+              initial={{ opacity: 0, y: 40, scale: 0.92, x: 20 }}
+              animate={{ opacity: 1, y: 0, scale: 1, x: 0 }}
+              exit={{ opacity: 0, scale: 0.92, x: 20, transition: { duration: 0.25 } }}
+              transition={{ type: 'spring', damping: 22, stiffness: 320 }}
+              className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl shadow-card border text-sm font-medium backdrop-blur-xl
+                ${toast.type === 'success' ? 'glass-strong text-green-400 border-green-500/25' :
+                  toast.type === 'error' ? 'glass-strong text-red-400 border-red-500/25' :
+                  'glass-strong text-blue-400 border-blue-500/25'}`}
             >
               {toast.type === 'success' && <CheckCircle2 size={18} />}
               {toast.type === 'error' && <AlertCircle size={18} />}

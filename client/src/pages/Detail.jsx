@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Star, AlertCircle } from 'lucide-react';
+import { Star, AlertCircle, Ruler } from 'lucide-react';
 import api from '../utils/api';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
+import { useRecentlyViewed } from '../context/RecentlyViewedContext';
 import ImageGallery from '../components/ImageGallery';
 import ProductCard from '../components/ProductCard';
+import SizeGuideModal from '../components/SizeGuideModal';
 
 function Rating({ value, text }) {
   return (
@@ -28,8 +30,10 @@ export default function Detail() {
   const [related, setRelated] = useState([]);
   
   const [size, setSize] = useState(null);
+  const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
   const { add } = useCart();
   const { user } = useAuth();
+  const { trackView } = useRecentlyViewed();
 
   // Review Form State
   const [rating, setRating] = useState(5);
@@ -56,6 +60,10 @@ export default function Detail() {
   };
 
   useEffect(() => { fetchProduct(); }, [slug]);
+
+  useEffect(() => {
+    if (product?._id) trackView(product);
+  }, [product?._id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const submitReview = async (e) => {
     e.preventDefault();
@@ -122,7 +130,17 @@ export default function Detail() {
           <p className="text-zinc-400 mt-6 leading-relaxed">{product.description}</p>
 
           <div className="mt-8">
-            <h3 className="text-sm uppercase tracking-wider text-zinc-400 mb-3">Select Size (US)</h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm uppercase tracking-wider text-zinc-400">Select Size (US)</h3>
+              <button
+                type="button"
+                onClick={() => setSizeGuideOpen(true)}
+                className="flex items-center gap-1.5 text-xs text-gold hover:text-gold/80 transition underline-offset-2 hover:underline"
+              >
+                <Ruler size={13} />
+                Size Guide
+              </button>
+            </div>
             <div className="flex flex-wrap gap-2">
               {product.sizes?.map(s => (
                 <button key={s} onClick={() => setSize(s)}
@@ -133,6 +151,13 @@ export default function Detail() {
               ))}
             </div>
           </div>
+
+          <SizeGuideModal
+            open={sizeGuideOpen}
+            onClose={() => setSizeGuideOpen(false)}
+            brand={product.brand}
+            selectedSize={size}
+          />
 
           <button
             disabled={!size || product.stock === 0}

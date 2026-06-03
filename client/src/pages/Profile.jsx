@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Lock, Check, Package, AlertCircle } from 'lucide-react';
+import { User, Lock, Check, Package, AlertCircle, RotateCcw, Bell } from 'lucide-react';
+import { RETURN_STATUS_STYLE, REASON_LABELS } from '../components/ReturnRequestModal';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
 import { Link } from 'react-router-dom';
@@ -8,11 +9,18 @@ import { Link } from 'react-router-dom';
 export default function Profile() {
   const { user } = useAuth();
   
-  const [activeTab, setActiveTab] = useState('settings'); // 'settings' | 'orders'
+  const [activeTab, setActiveTab] = useState('settings'); // 'settings' | 'orders' | 'returns'
   const [orders, setOrders] = useState([]);
+  const [returns, setReturns] = useState([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
+  const [loadingReturns, setLoadingReturns] = useState(false);
   
-  const [form, setForm] = useState({ name: user?.name || '', password: '', confirm: '' });
+  const [form, setForm] = useState({
+    name: user?.name || '',
+    password: '',
+    confirm: '',
+    emailNotifications: user?.emailNotifications !== false
+  });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [toast, setToast] = useState('');
@@ -27,9 +35,21 @@ export default function Profile() {
     }
   }, [activeTab, orders.length]);
 
+  useEffect(() => {
+    if (activeTab !== 'returns') return;
+    setLoadingReturns(true);
+    api.get('/returns/mine')
+      .then(r => setReturns(r.data))
+      .catch(console.error)
+      .finally(() => setLoadingReturns(false));
+  }, [activeTab]);
+
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(''), 3000); };
 
-  const handle = e => setForm(f => ({ ...f, [e.target.name]: e.target.value }));
+  const handle = e => {
+    const { name, value, type, checked } = e.target;
+    setForm(f => ({ ...f, [name]: type === 'checkbox' ? checked : value }));
+  };
 
   const updateProfile = async e => {
     e.preventDefault();
@@ -40,7 +60,7 @@ export default function Profile() {
     }
     setSaving(true);
     try {
-      const payload = { name: form.name };
+      const payload = { name: form.name, emailNotifications: form.emailNotifications };
       if (form.password) payload.password = form.password;
       
       const res = await api.put('/auth/profile', payload);
@@ -98,6 +118,13 @@ export default function Profile() {
           }`}>
           Order History
         </button>
+        <button 
+          onClick={() => setActiveTab('returns')}
+          className={`pb-2 text-sm font-medium tracking-wide transition border-b-2 ${
+            activeTab === 'returns' ? 'border-gold text-gold' : 'border-transparent text-zinc-400 hover:text-zinc-200'
+          }`}>
+          Returns
+        </button>
       </div>
 
       {activeTab === 'settings' && (
@@ -125,6 +152,27 @@ export default function Profile() {
               <p className="text-xs text-zinc-500 mt-1">Email cannot be changed.</p>
             </div>
             
+            <div className="pt-4 border-t border-white/5">
+              <h3 className="text-sm font-medium text-zinc-200 mb-4 flex items-center gap-2">
+                <Bell size={16} className="text-gold" /> Email Notifications
+              </h3>
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  name="emailNotifications"
+                  checked={form.emailNotifications}
+                  onChange={handle}
+                  className="mt-1 accent-gold"
+                />
+                <div>
+                  <p className="text-sm text-zinc-300">Order confirmation emails</p>
+                  <p className="text-xs text-zinc-500 mt-1">
+                    Receive an email at {user?.email} when your order is confirmed.
+                  </p>
+                </div>
+              </label>
+            </div>
+
             <div className="pt-4 border-t border-white/5">
               <h3 className="text-sm font-medium text-zinc-200 mb-4">Change Password</h3>
               <div className="space-y-4">
@@ -189,10 +237,18 @@ export default function Profile() {
                         {order.status}
                       </span>
                     </div>
-                    <div>
+                    <div className="flex gap-2">
                       <Link to={`/order/${order._id}`} className="btn-gold px-4 py-2 text-xs">
                         Track Order
                       </Link>
+                      {order.status === 'delivered' && order.payment_status === 'paid' && (
+                        <Link
+                          to={`/order/${order._id}`}
+                          className="px-4 py-2 text-xs rounded-xl border border-white/15 text-zinc-300 hover:border-gold/30 hover:text-gold transition"
+                        >
+                          Return
+                        </Link>
+                      )}
                     </div>
                   </div>
 
@@ -210,6 +266,60 @@ export default function Profile() {
                       </div>
                     ))}
                   </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </motion.div>
+      )}
+
+      {activeTab === 'returns' && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+          {loadingReturns ? (
+            <div className="flex items-center justify-center h-32">
+              <div className="w-8 h-8 rounded-full border-2 border-gold border-t-transparent animate-spin" />
+            </div>
+          ) : returns.length === 0 ? (
+            <div className="glass rounded-2xl p-12 text-center">
+              <RotateCcw size={48} className="mx-auto text-zinc-600 mb-4" />
+              <p className="text-zinc-400">No return requests yet.</p>
+              <p className="text-zinc-500 text-sm mt-2">You can request a return from a delivered order.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {returns.map(r => (
+                <div key={r._id} className="glass rounded-2xl p-6">
+                  <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
+                    <div>
+                      <p className="text-xs text-zinc-500 uppercase tracking-wider">Order</p>
+                      <Link to={`/order/${r.order?._id}`} className="font-mono text-gold text-sm hover:underline">
+                        #{r.order?._id?.slice(-8).toUpperCase()}
+                      </Link>
+                    </div>
+                    <div>
+                      <p className="text-xs text-zinc-500 uppercase tracking-wider mb-1">Status</p>
+                      <span className={`text-xs px-2 py-1 rounded-full capitalize ${RETURN_STATUS_STYLE[r.status]}`}>
+                        {r.status}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="text-xs text-zinc-500 uppercase tracking-wider">Reason</p>
+                      <p className="text-zinc-300 text-sm mt-1">{REASON_LABELS[r.reason]}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-zinc-500 uppercase tracking-wider">Submitted</p>
+                      <p className="text-zinc-300 text-sm mt-1">{new Date(r.createdAt).toLocaleDateString()}</p>
+                    </div>
+                  </div>
+                  {r.description && <p className="text-sm text-zinc-500">{r.description}</p>}
+                  {r.admin_note && (
+                    <p className="text-sm text-zinc-400 mt-2 pt-2 border-t border-white/5">
+                      Admin: {r.admin_note}
+                    </p>
+                  )}
+                  {r.refund_amount != null && r.status === 'refunded' && (
+                    <p className="text-sm text-green-400 mt-2">Refunded ${r.refund_amount.toFixed(2)}</p>
+                  )}
                 </div>
               ))}
             </div>

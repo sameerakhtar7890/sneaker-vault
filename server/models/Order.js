@@ -10,12 +10,17 @@ const orderItemSchema = new mongoose.Schema({
 }, { _id: false });
 
 const orderSchema = new mongoose.Schema({
-  user_id:           { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+  user_id:           { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null, index: true },
+  is_guest:          { type: Boolean, default: false, index: true },
+  confirmation_email: { type: String, required: true, lowercase: true, trim: true, index: true },
   cart_items:        [orderItemSchema],
   shipping_address: {
     fullName: String, address: String, city: String,
     postalCode: String, country: String
   },
+  subtotal:          { type: Number, min: 0 },
+  discount_amount:   { type: Number, default: 0, min: 0 },
+  coupon_code:       { type: String, default: null },
   total_price:       { type: Number, required: true, min: 0 },
   payment_status:    { type: String, enum: ['pending','paid','failed'], default: 'pending', index: true },
   payment_intent_id: { type: String, index: true },

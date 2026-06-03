@@ -8,7 +8,12 @@ export const register = asyncHandler(async (req, res) => {
   const { name, email, password } = req.body;
   if (await User.findOne({ email })) { res.status(400); throw new Error('Email already in use'); }
   const user = await User.create({ name, email, password });
-  res.status(201).json({ _id: user._id, name: user.name, email: user.email, isAdmin: user.isAdmin, wishlist: user.wishlist, token: sign(user._id) });
+  res.status(201).json({
+    _id: user._id, name: user.name, email: user.email,
+    isAdmin: user.isAdmin, wishlist: user.wishlist,
+    emailNotifications: user.emailNotifications,
+    token: sign(user._id)
+  });
 });
 
 export const login = asyncHandler(async (req, res) => {
@@ -17,7 +22,12 @@ export const login = asyncHandler(async (req, res) => {
   if (!user || !(await user.matchPassword(password))) {
     res.status(401); throw new Error('Invalid credentials');
   }
-  res.json({ _id: user._id, name: user.name, email: user.email, isAdmin: user.isAdmin, wishlist: user.wishlist, token: sign(user._id) });
+  res.json({
+    _id: user._id, name: user.name, email: user.email,
+    isAdmin: user.isAdmin, wishlist: user.wishlist,
+    emailNotifications: user.emailNotifications,
+    token: sign(user._id)
+  });
 });
 
 export const me = asyncHandler(async (req, res) => res.json(req.user));
@@ -30,6 +40,9 @@ export const updateProfile = asyncHandler(async (req, res) => {
   if (req.body.password) {
     user.password = req.body.password;
   }
+  if (req.body.emailNotifications != null) {
+    user.emailNotifications = Boolean(req.body.emailNotifications);
+  }
   
   const updatedUser = await user.save();
   res.json({
@@ -38,7 +51,8 @@ export const updateProfile = asyncHandler(async (req, res) => {
     email: updatedUser.email,
     isAdmin: updatedUser.isAdmin,
     wishlist: updatedUser.wishlist,
-    token: sign(updatedUser._id) // issue new token just in case
+    emailNotifications: updatedUser.emailNotifications,
+    token: sign(updatedUser._id)
   });
 });
 

@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Search, SlidersHorizontal, X, ArrowUpDown } from 'lucide-react';
+import { Search, SlidersHorizontal, X, ArrowUpDown, Ruler } from 'lucide-react';
 import { motion } from 'framer-motion';
 import ProductCard from '../components/ProductCard';
 import ProductSkeleton from '../components/ProductSkeleton';
+import SizeGuideModal from '../components/SizeGuideModal';
+import RecentlyViewedSection from '../components/RecentlyViewedSection';
 import api from '../utils/api';
 
 const BRANDS = ['all', 'Nike', 'Adidas', 'Jordan', 'New Balance', 'Puma'];
@@ -16,6 +18,7 @@ export default function Shop() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [pageData, setPageData] = useState({ page: 1, pages: 1, total: 0 });
+  const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
 
   // Parse filters from URL
   const q        = searchParams.get('q') || '';
@@ -55,9 +58,15 @@ export default function Shop() {
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-12">
-      <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+        className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4"
+      >
         <div>
-          <h1 className="font-display text-4xl">The Shop</h1>
+          <p className="section-eyebrow mb-2">CURATED SELECTION</p>
+          <h1 className="font-display text-4xl md:text-5xl">The Shop</h1>
           <p className="text-zinc-400 mt-2 text-sm">{pageData.total || products.length} pairs found</p>
         </div>
 
@@ -70,8 +79,7 @@ export default function Shop() {
               placeholder="Search sneakers..."
               value={q}
               onChange={(e) => updateParams({ q: e.target.value })}
-              className="w-full bg-white/5 border border-white/10 rounded-full pl-11 pr-4 py-2.5 text-sm
-                         focus:outline-none focus:border-gold/50 transition placeholder-zinc-600"
+              className="input-premium rounded-full pl-11 pr-10"
             />
             {q && (
               <button onClick={() => updateParams({ q: '' })}
@@ -87,8 +95,7 @@ export default function Shop() {
             <select
               value={sort}
               onChange={e => updateParams({ sort: e.target.value })}
-              className="appearance-none bg-white/5 border border-white/10 rounded-full pl-8 pr-4 py-2.5 text-sm
-                         focus:outline-none focus:border-gold/50 transition text-zinc-300 cursor-pointer"
+              className="input-premium appearance-none rounded-full pl-8 pr-8 cursor-pointer text-zinc-300"
             >
               <option value="newest" className="bg-zinc-900">Newest</option>
               <option value="popular" className="bg-zinc-900">Most Popular</option>
@@ -99,11 +106,13 @@ export default function Shop() {
 
           <button 
             onClick={() => setShowFilters(f => !f)}
-            className="md:hidden p-3 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition">
+            className="md:hidden p-3 rounded-full glass hover:bg-gold/10 transition-all duration-300 hover:scale-105 active:scale-95">
             <SlidersHorizontal size={16} className="text-zinc-300" />
           </button>
         </div>
-      </div>
+      </motion.div>
+
+      <RecentlyViewedSection className="mb-12" />
 
       <div className="grid md:grid-cols-[240px_1fr] gap-10">
         {/* Filters Sidebar */}
@@ -137,9 +146,18 @@ export default function Shop() {
             </div>
 
             <div>
-              <label className="text-xs text-zinc-400 uppercase tracking-wider mb-3 block">Size (US)</label>
+              <div className="flex items-center justify-between mb-3">
+                <label className="text-xs text-zinc-400 uppercase tracking-wider">Size (US)</label>
+                <button
+                  type="button"
+                  onClick={() => setSizeGuideOpen(true)}
+                  className="flex items-center gap-1 text-[11px] text-gold hover:text-gold/80 transition"
+                >
+                  <Ruler size={11} /> Size Guide
+                </button>
+              </div>
               <select value={size} onChange={e => updateParams({ size: e.target.value })}
-                className="w-full bg-ink-900 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-gold/30">
+                className="input-premium">
                 {SIZES.map(s => <option key={s} value={s}>{s === 'all' ? 'All Sizes' : s}</option>)}
               </select>
             </div>
@@ -192,6 +210,13 @@ export default function Shop() {
           )}
         </div>
       </div>
+
+      <SizeGuideModal
+        open={sizeGuideOpen}
+        onClose={() => setSizeGuideOpen(false)}
+        brand={brand !== 'all' ? brand : null}
+        selectedSize={size !== 'all' ? size : null}
+      />
     </div>
   );
 }

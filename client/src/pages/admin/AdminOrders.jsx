@@ -83,8 +83,8 @@ export default function AdminOrders() {
                 <tr key={o._id} className="hover:bg-white/3 transition">
                   <td className="px-5 py-4 font-mono text-xs text-zinc-400">{o._id.slice(-8)}</td>
                   <td className="px-5 py-4">
-                    <p className="text-zinc-100">{o.user_id?.name || '—'}</p>
-                    <p className="text-zinc-500 text-xs">{o.user_id?.email || ''}</p>
+                    <p className="text-zinc-100">{o.user_id?.name || (o.is_guest ? 'Guest' : '—')}</p>
+                    <p className="text-zinc-500 text-xs">{o.confirmation_email || o.user_id?.email || ''}</p>
                   </td>
                   <td className="px-5 py-4 text-zinc-300">{o.cart_items?.length || 0} item(s)</td>
                   <td className="px-5 py-4 text-gold font-semibold">${o.total_price?.toFixed(2)}</td>

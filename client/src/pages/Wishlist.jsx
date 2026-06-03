@@ -37,13 +37,18 @@ export default function Wishlist() {
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-12">
-      <div className="flex items-end justify-between mb-8">
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+        className="flex items-end justify-between mb-8"
+      >
         <div>
-          <p className="text-gold tracking-[0.3em] text-xs mb-2">YOUR FAVORITES</p>
+          <p className="section-eyebrow mb-2">YOUR FAVORITES</p>
           <h1 className="font-display text-4xl">Wishlist</h1>
         </div>
         <span className="text-zinc-400 text-sm">{wishlist.length} items</span>
-      </div>
+      </motion.div>
 
       {products.length === 0 ? (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}

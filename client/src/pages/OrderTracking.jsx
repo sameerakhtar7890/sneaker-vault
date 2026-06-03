@@ -1,23 +1,46 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useSearchParams } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { motion } from 'framer-motion';
-import { CheckCircle2, Clock, Truck, Package, ArrowLeft } from 'lucide-react';
+import { CheckCircle2, Clock, Truck, Package, ArrowLeft, RotateCcw } from 'lucide-react';
 import api from '../utils/api';
+import ReturnRequestModal, { RETURN_STATUS_STYLE, REASON_LABELS } from '../components/ReturnRequestModal';
 
 const STATUS_STEPS = ['created', 'processing', 'shipped', 'delivered'];
 
 export default function OrderTracking() {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
+  const { user } = useAuth();
+  const trackEmail = searchParams.get('email') || '';
+
   const [order, setOrder] = useState(null);
+  const [returnReq, setReturnReq] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [modalOpen, setModalOpen] = useState(false);
 
-  useEffect(() => {
-    api.get(`/orders/${id}`)
-      .then(r => setOrder(r.data))
+  const load = () => {
+    setLoading(true);
+    setError('');
+
+    const orderParams = trackEmail ? { params: { email: trackEmail } } : {};
+    const orderReq = api.get(`/orders/${id}`, orderParams);
+
+    const returnReq = user
+      ? api.get(`/returns/order/${id}`).catch(() => ({ data: null }))
+      : Promise.resolve({ data: null });
+
+    Promise.all([orderReq, returnReq])
+      .then(([orderRes, returnRes]) => {
+        setOrder(orderRes.data);
+        setReturnReq(returnRes.data);
+      })
       .catch(err => setError(err.response?.data?.message || 'Order not found'))
       .finally(() => setLoading(false));
-  }, [id]);
+  };
+
+  useEffect(() => { load(); }, [id, trackEmail, user]);
 
   if (loading) return (
     <div className="flex justify-center py-32">
@@ -29,17 +52,24 @@ export default function OrderTracking() {
     <div className="max-w-3xl mx-auto px-6 py-20 text-center">
       <h2 className="text-2xl mb-4">Order Not Found</h2>
       <p className="text-zinc-500 mb-8">{error}</p>
-      <Link to="/profile" className="btn-gold px-8 py-3">Return to Profile</Link>
+      <Link to={user ? '/profile' : '/shop'} className="btn-gold px-8 py-3">
+        {user ? 'Return to Profile' : 'Back to Shop'}
+      </Link>
     </div>
   );
 
   const currentStepIndex = STATUS_STEPS.indexOf(order.status) !== -1 ? STATUS_STEPS.indexOf(order.status) : 0;
   const isCancelled = order.status === 'cancelled';
+  const canRequestReturn = user
+    && !order.is_guest
+    && order.status === 'delivered'
+    && order.payment_status === 'paid'
+    && !returnReq;
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-12">
-      <Link to="/profile" className="flex items-center gap-2 text-sm text-zinc-400 hover:text-gold transition mb-8 w-fit">
-        <ArrowLeft size={16} /> Back to Profile
+      <Link to={user ? '/profile' : '/shop'} className="flex items-center gap-2 text-sm text-zinc-400 hover:text-gold transition mb-8 w-fit">
+        <ArrowLeft size={16} /> {user ? 'Back to Profile' : 'Back to Shop'}
       </Link>
 
       <div className="glass rounded-3xl p-8 md:p-12">
@@ -58,6 +88,42 @@ export default function OrderTracking() {
           </div>
         </div>
 
+        {/* Return status banner */}
+        {returnReq && (
+          <div className="mb-8 p-5 rounded-2xl border border-white/10 bg-white/[0.02]">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <RotateCcw size={16} className="text-gold" />
+                  <span className="text-sm font-medium text-zinc-200">Return Request</span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full capitalize ${RETURN_STATUS_STYLE[returnReq.status]}`}>
+                    {returnReq.status}
+                  </span>
+                </div>
+                <p className="text-sm text-zinc-400">
+                  Reason: {REASON_LABELS[returnReq.reason] || returnReq.reason}
+                </p>
+                {returnReq.description && (
+                  <p className="text-sm text-zinc-500 mt-1">{returnReq.description}</p>
+                )}
+                {returnReq.admin_note && (
+                  <p className="text-sm text-zinc-400 mt-2 pt-2 border-t border-white/5">
+                    <span className="text-zinc-500">Admin note:</span> {returnReq.admin_note}
+                  </p>
+                )}
+                {returnReq.refund_amount != null && returnReq.status === 'refunded' && (
+                  <p className="text-sm text-green-400 mt-2">
+                    Refund issued: ${returnReq.refund_amount.toFixed(2)}
+                  </p>
+                )}
+              </div>
+              <p className="text-xs text-zinc-500">
+                Submitted {new Date(returnReq.createdAt).toLocaleDateString()}
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Timeline */}
         {isCancelled ? (
           <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-6 mb-12 text-center">
@@ -67,19 +133,19 @@ export default function OrderTracking() {
         ) : (
           <div className="relative mb-16">
             <div className="absolute top-1/2 left-0 w-full h-1 bg-white/10 -translate-y-1/2 rounded-full hidden sm:block z-0" />
-            <div 
-              className="absolute top-1/2 left-0 h-1 bg-gold -translate-y-1/2 rounded-full transition-all duration-1000 hidden sm:block z-0" 
+            <div
+              className="absolute top-1/2 left-0 h-1 bg-gold -translate-y-1/2 rounded-full transition-all duration-1000 hidden sm:block z-0"
               style={{ width: `${(currentStepIndex / (STATUS_STEPS.length - 1)) * 100}%` }}
             />
-            
+
             <div className="flex flex-col sm:flex-row justify-between gap-8 sm:gap-0 relative z-10">
               {STATUS_STEPS.map((step, index) => {
                 const isActive = index <= currentStepIndex;
                 const Icon = index === 0 ? Clock : index === 1 ? Package : index === 2 ? Truck : CheckCircle2;
-                
+
                 return (
                   <div key={step} className="flex sm:flex-col items-center gap-4 sm:gap-3 text-center">
-                    <motion.div 
+                    <motion.div
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
                       transition={{ delay: index * 0.2 }}
@@ -122,22 +188,55 @@ export default function OrderTracking() {
               ))}
             </div>
           </div>
-          
-          <div className="bg-ink-900/50 rounded-2xl p-6 border border-white/5 h-fit">
-            <h3 className="text-sm font-bold text-zinc-300 uppercase tracking-wider mb-4">Order Summary</h3>
-            <div className="space-y-3 text-sm">
-              <div className="flex justify-between text-zinc-400">
-                <span>Shipping Address</span>
-                <span className="text-right max-w-[60%]">{order.shipping_address.address}, {order.shipping_address.city}, {order.shipping_address.postal_code}</span>
-              </div>
-              <div className="flex justify-between text-zinc-400">
-                <span>Total Amount</span>
-                <span className="text-zinc-100 font-semibold">${order.total_price.toFixed(2)}</span>
+
+          <div className="space-y-4">
+            <div className="bg-ink-900/50 rounded-2xl p-6 border border-white/5">
+              <h3 className="text-sm font-bold text-zinc-300 uppercase tracking-wider mb-4">Order Summary</h3>
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between text-zinc-400">
+                  <span>Shipping Address</span>
+                  <span className="text-right max-w-[60%]">
+                    {order.shipping_address?.address}, {order.shipping_address?.city}
+                  </span>
+                </div>
+                {order.subtotal != null && (
+                  <div className="flex justify-between text-zinc-400">
+                    <span>Subtotal</span>
+                    <span>${order.subtotal.toFixed(2)}</span>
+                  </div>
+                )}
+                {order.discount_amount > 0 && (
+                  <div className="flex justify-between text-green-400">
+                    <span>Discount{order.coupon_code ? ` (${order.coupon_code})` : ''}</span>
+                    <span>-${order.discount_amount.toFixed(2)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-zinc-400">
+                  <span>Total Amount</span>
+                  <span className="text-zinc-100 font-semibold">${order.total_price.toFixed(2)}</span>
+                </div>
               </div>
             </div>
+
+            {canRequestReturn && (
+              <button
+                onClick={() => setModalOpen(true)}
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-gold/30
+                           text-gold hover:bg-gold/10 transition text-sm font-medium"
+              >
+                <RotateCcw size={16} /> Request Return
+              </button>
+            )}
           </div>
         </div>
       </div>
+
+      <ReturnRequestModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        order={order}
+        onSuccess={load}
+      />
     </div>
   );
 }

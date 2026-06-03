@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Package, ShoppingBag, DollarSign, Users } from 'lucide-react';
+import { Package, ShoppingBag, DollarSign, Users, TrendingUp } from 'lucide-react';
 import api from '../../utils/api';
+import AdminSalesCharts from './AdminSalesCharts';
 
-function StatCard({ icon: Icon, label, value, color }) {
+function StatCard({ icon: Icon, label, value, sub, color }) {
   return (
     <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
       className="glass rounded-2xl p-6 flex items-center gap-4">
@@ -13,35 +14,20 @@ function StatCard({ icon: Icon, label, value, color }) {
       <div>
         <p className="text-xs text-zinc-500 tracking-widest uppercase">{label}</p>
         <p className="font-display text-2xl mt-0.5">{value}</p>
+        {sub && <p className="text-xs text-zinc-500 mt-0.5">{sub}</p>}
       </div>
     </motion.div>
   );
 }
 
 export default function AdminDashboard() {
-  const [stats, setStats] = useState({ products: 0, orders: 0, revenue: 0 });
-  const [recentOrders, setRecentOrders] = useState([]);
+  const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([
-      api.get('/orders'),
-      api.get('/products'),
-      api.get('/auth/users')
-    ]).then(res => {
-      const orders = res[0].data;
-      const products = res[1].data.products || res[1].data;
-      const users = res[2].data;
-      
-      const rev = orders.filter(o => o.payment_status === 'paid').reduce((acc, o) => acc + o.total_price, 0);
-      
-      setStats({
-        revenue: rev,
-        orders: orders.length,
-        products: products.length
-      });
-      setRecentOrders(orders.slice(0, 5));
-    }).catch(console.error)
+    api.get('/analytics/overview')
+      .then(r => setData(r.data))
+      .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
 
@@ -59,20 +45,44 @@ export default function AdminDashboard() {
     </div>
   );
 
+  const { stats, statusBreakdown, paymentBreakdown, topProducts, recentOrders } = data || {};
+
   return (
     <div>
       <h1 className="font-display text-3xl mb-8">Dashboard</h1>
 
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-10">
-        <StatCard icon={Package}     label="Products" value={stats.products} color="bg-gold/10 text-gold" />
-        <StatCard icon={ShoppingBag} label="Orders"   value={stats.orders}   color="bg-blue-400/10 text-blue-400" />
-        <StatCard icon={DollarSign}  label="Revenue"  value={`$${stats.revenue.toLocaleString()}`} color="bg-green-400/10 text-green-400" />
+      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+        <StatCard
+          icon={DollarSign}
+          label="Total Revenue"
+          value={`$${(stats?.revenue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+          sub={`$${(stats?.monthRevenue || 0).toFixed(2)} this month`}
+          color="bg-green-400/10 text-green-400"
+        />
+        <StatCard
+          icon={ShoppingBag}
+          label="Orders"
+          value={stats?.orders || 0}
+          sub={`${stats?.paidOrders || 0} paid`}
+          color="bg-blue-400/10 text-blue-400"
+        />
+        <StatCard icon={Package} label="Products" value={stats?.products || 0} color="bg-gold/10 text-gold" />
+        <StatCard icon={Users} label="Customers" value={stats?.users || 0} color="bg-purple-400/10 text-purple-400" />
       </div>
+
+      <AdminSalesCharts
+        statusBreakdown={statusBreakdown}
+        paymentBreakdown={paymentBreakdown}
+        topProducts={topProducts}
+      />
 
       {/* Recent Orders */}
       <div className="glass rounded-2xl p-6">
-        <h2 className="font-display text-xl mb-4">Recent Orders</h2>
-        {recentOrders.length === 0 ? (
+        <div className="flex items-center gap-2 mb-4">
+          <TrendingUp size={18} className="text-gold" />
+          <h2 className="font-display text-xl">Recent Orders</h2>
+        </div>
+        {!recentOrders?.length ? (
           <p className="text-zinc-500 text-sm">No orders yet.</p>
         ) : (
           <div className="overflow-x-auto">
@@ -84,6 +94,7 @@ export default function AdminDashboard() {
                   <th className="pb-3 font-medium">Total</th>
                   <th className="pb-3 font-medium">Status</th>
                   <th className="pb-3 font-medium">Payment</th>
+                  <th className="pb-3 font-medium">Date</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
@@ -103,6 +114,9 @@ export default function AdminDashboard() {
                       }`}>
                         {o.payment_status}
                       </span>
+                    </td>
+                    <td className="py-3 text-zinc-500 text-xs">
+                      {new Date(o.createdAt).toLocaleDateString()}
                     </td>
                   </tr>
                 ))}

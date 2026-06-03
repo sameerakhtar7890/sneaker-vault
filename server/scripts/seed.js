@@ -26,6 +26,191 @@ const userSchema = new mongoose.Schema({
 const Product = mongoose.model('Product', productSchema);
 const User    = mongoose.model('User',    userSchema);
 
+const couponSchema = new mongoose.Schema({
+  code: { type: String, unique: true, uppercase: true },
+  description: String,
+  discountType: { type: String, enum: ['percent', 'fixed'] },
+  discountValue: Number,
+  minOrderAmount: { type: Number, default: 0 },
+  maxDiscount: Number,
+  expiresAt: Date,
+  usageLimit: Number,
+  usedCount: { type: Number, default: 0 },
+  isActive: { type: Boolean, default: true }
+}, { timestamps: true });
+
+const Coupon = mongoose.model('Coupon', couponSchema);
+
+const sizeGuideRowSchema = new mongoose.Schema({
+  us: String, uk: String, eu: String, cm: String
+}, { _id: false });
+
+const sizeGuideSchema = new mongoose.Schema({
+  name: String,
+  brand: { type: String, default: null },
+  gender: { type: String, default: 'unisex' },
+  rows: [sizeGuideRowSchema],
+  fitTips: String,
+  isDefault: { type: Boolean, default: false },
+  isActive: { type: Boolean, default: true }
+}, { timestamps: true });
+
+const SizeGuide = mongoose.model('SizeGuide', sizeGuideSchema);
+
+const orderItemSchema = new mongoose.Schema({
+  product: mongoose.Schema.Types.ObjectId,
+  name: String, image: String, size: Number, qty: Number, price: Number
+}, { _id: false });
+
+const orderSchema = new mongoose.Schema({
+  user_id: mongoose.Schema.Types.ObjectId,
+  cart_items: [orderItemSchema],
+  shipping_address: {
+    fullName: String, address: String, city: String,
+    postalCode: String, country: String
+  },
+  subtotal: Number,
+  discount_amount: { type: Number, default: 0 },
+  coupon_code: { type: String, default: null },
+  total_price: Number,
+  payment_status: { type: String, default: 'paid' },
+  status: { type: String, default: 'processing' }
+}, { timestamps: true });
+
+const Order = mongoose.model('Order', orderSchema);
+
+function buildSampleOrders(userId, productList) {
+  const statuses = ['processing', 'shipped', 'delivered', 'delivered', 'delivered', 'created'];
+  const orders = [];
+  const now = new Date();
+
+  for (let i = 0; i < 32; i++) {
+    const daysAgo = Math.floor(Math.random() * 335);
+    const createdAt = new Date(now);
+    createdAt.setDate(createdAt.getDate() - daysAgo);
+
+    const product = productList[Math.floor(Math.random() * Math.min(10, productList.length))];
+    const qty = 1 + Math.floor(Math.random() * 2);
+    const subtotal = Math.round(product.price * qty * 100) / 100;
+    const discount = Math.random() > 0.75 ? Math.round(subtotal * 0.1 * 100) / 100 : 0;
+    const paid = Math.random() > 0.12;
+
+    orders.push({
+      user_id: userId,
+      is_guest: false,
+      confirmation_email: 'customer@sneakervault.com',
+      cart_items: [{
+        product: product._id,
+        name: product.name,
+        image: product.images?.[0] || '',
+        size: product.sizes?.[0] || 10,
+        qty,
+        price: product.price
+      }],
+      shipping_address: {
+        fullName: 'Alex Rivera',
+        address: '742 Vault Street',
+        city: 'New York',
+        postalCode: '10001',
+        country: 'US'
+      },
+      subtotal,
+      discount_amount: discount,
+      coupon_code: discount ? 'WELCOME10' : null,
+      total_price: Math.round((subtotal - discount) * 100) / 100,
+      payment_status: paid ? 'paid' : (Math.random() > 0.5 ? 'pending' : 'failed'),
+      status: paid ? statuses[Math.floor(Math.random() * statuses.length)] : 'created',
+      createdAt,
+      updatedAt: createdAt
+    });
+  }
+  return orders;
+}
+
+const STANDARD_ROWS = [
+  { us: '7',   uk: '6',   eu: '40',   cm: '25' },
+  { us: '7.5', uk: '6.5', eu: '40.5', cm: '25.5' },
+  { us: '8',   uk: '7',   eu: '41',   cm: '26' },
+  { us: '8.5', uk: '7.5', eu: '42',   cm: '26.5' },
+  { us: '9',   uk: '8',   eu: '42.5', cm: '27' },
+  { us: '9.5', uk: '8.5', eu: '43',   cm: '27.5' },
+  { us: '10',  uk: '9',   eu: '44',   cm: '28' },
+  { us: '10.5', uk: '9.5', eu: '44.5', cm: '28.5' },
+  { us: '11',  uk: '10',  eu: '45',   cm: '29' },
+  { us: '11.5', uk: '10.5', eu: '45.5', cm: '29.5' },
+  { us: '12',  uk: '11',  eu: '46',   cm: '30' },
+  { us: '13',  uk: '12',  eu: '47.5', cm: '31' }
+];
+
+const sampleSizeGuides = [
+  {
+    name: "Men's Sneaker Standard",
+    brand: null,
+    gender: 'unisex',
+    rows: STANDARD_ROWS,
+    fitTips: 'Standard fit for most sneaker brands. If you are between sizes, we recommend going half a size up for comfort.',
+    isDefault: true,
+    isActive: true
+  },
+  {
+    name: 'Nike Size Chart',
+    brand: 'Nike',
+    gender: 'men',
+    rows: STANDARD_ROWS,
+    fitTips: 'Nike sneakers typically run slightly small. Consider going half a size up, especially for Air Max and Dunk models.',
+    isDefault: false,
+    isActive: true
+  },
+  {
+    name: 'Adidas Size Chart',
+    brand: 'Adidas',
+    gender: 'unisex',
+    rows: STANDARD_ROWS,
+    fitTips: 'Adidas generally fits true to size. Ultraboost and Yeezy models may feel snug — size up if you prefer a roomier fit.',
+    isDefault: false,
+    isActive: true
+  },
+  {
+    name: 'Jordan Size Chart',
+    brand: 'Jordan',
+    gender: 'men',
+    rows: STANDARD_ROWS,
+    fitTips: 'Air Jordan Retros fit true to size. High-top models may feel snug at first but break in after a few wears.',
+    isDefault: false,
+    isActive: true
+  }
+];
+
+const sampleCoupons = [
+  {
+    code: 'WELCOME10',
+    description: '10% off your first order',
+    discountType: 'percent',
+    discountValue: 10,
+    minOrderAmount: 50,
+    maxDiscount: 30,
+    isActive: true
+  },
+  {
+    code: 'SAVE20',
+    description: '$20 off orders over $100',
+    discountType: 'fixed',
+    discountValue: 20,
+    minOrderAmount: 100,
+    isActive: true
+  },
+  {
+    code: 'VAULT25',
+    description: '25% off — limited time',
+    discountType: 'percent',
+    discountValue: 25,
+    minOrderAmount: 0,
+    maxDiscount: 50,
+    usageLimit: 100,
+    isActive: true
+  }
+];
+
 const products = [
   // ── Nike (8) ──────────────────────────────────────
   {
@@ -359,6 +544,31 @@ async function seed() {
     { upsert: true, new: true }
   );
   console.log(`👤  Admin user ready  →  ${adminEmail}  /  Admin@1234`);
+
+  /* demo customer for sample orders */
+  const customerEmail = 'customer@sneakervault.com';
+  const customerHash = await bcrypt.hash('Customer@1234', 10);
+  const customer = await User.findOneAndUpdate(
+    { email: customerEmail },
+    { name: 'Alex Rivera', email: customerEmail, password: customerHash, isAdmin: false },
+    { upsert: true, new: true }
+  );
+
+  /* seed sample orders for analytics */
+  await Order.deleteMany({});
+  const sampleOrders = buildSampleOrders(customer._id, inserted);
+  await Order.insertMany(sampleOrders);
+  console.log(`📊  Seeded ${sampleOrders.length} sample orders for analytics`);
+
+  /* seed coupons */
+  await Coupon.deleteMany({});
+  await Coupon.insertMany(sampleCoupons);
+  console.log(`🏷   Seeded ${sampleCoupons.length} coupons  →  WELCOME10, SAVE20, VAULT25`);
+
+  /* seed size guides */
+  await SizeGuide.deleteMany({});
+  await SizeGuide.insertMany(sampleSizeGuides);
+  console.log(`📏  Seeded ${sampleSizeGuides.length} size guides`);
 
   await mongoose.disconnect();
   console.log('🏁  Done!');

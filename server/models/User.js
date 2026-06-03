@@ -6,7 +6,12 @@ const userSchema = new mongoose.Schema({
   email:    { type: String, required: true, unique: true, lowercase: true, index: true },
   password: { type: String, required: true, minlength: 6 },
   isAdmin:  { type: Boolean, default: false },
-  wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }]
+  emailNotifications: { type: Boolean, default: true },
+  wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
+  recentlyViewed: [{
+    product:  { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
+    viewedAt: { type: Date, default: Date.now }
+  }]
 }, { timestamps: true });
 
 userSchema.pre('save', async function (next) {

@@ -40,18 +40,18 @@ export default function Login() {
     <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center px-4 py-16">
       <motion.div
         initial={{ opacity: 0, y: 32 }} animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
+        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
         className="w-full max-w-md"
       >
         {/* Header */}
         <div className="text-center mb-8">
-          <p className="text-gold tracking-[0.3em] text-xs mb-2">WELCOME BACK</p>
+          <p className="section-eyebrow mb-2">WELCOME BACK</p>
           <h1 className="font-display text-4xl">Sign In</h1>
           <p className="text-zinc-400 mt-2 text-sm">Access your Sneaker Vault account</p>
         </div>
 
         {/* Card */}
-        <div className="glass rounded-2xl p-8">
+        <div className="glass-strong rounded-2xl p-8 shadow-card">
           {error && (
             <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 mb-6 text-red-400 text-sm">
               <AlertCircle size={16} className="shrink-0" />
@@ -69,8 +69,7 @@ export default function Login() {
                   id="login-email"
                   type="email" name="email" value={form.email} onChange={handle} required
                   placeholder="you@example.com"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl pl-11 pr-4 py-3 text-sm
-                             focus:outline-none focus:border-gold/50 focus:bg-white/8 transition placeholder-zinc-600"
+                  className="input-premium pl-11 pr-4 py-3"
                 />
               </div>
             </div>
@@ -84,8 +83,7 @@ export default function Login() {
                   id="login-password"
                   type={show ? 'text' : 'password'} name="password" value={form.password} onChange={handle} required
                   placeholder="••••••••"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl pl-11 pr-11 py-3 text-sm
-                             focus:outline-none focus:border-gold/50 transition placeholder-zinc-600"
+                  className="input-premium pl-11 pr-11 py-3"
                 />
                 <button type="button" onClick={() => setShow(s => !s)}
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300">
