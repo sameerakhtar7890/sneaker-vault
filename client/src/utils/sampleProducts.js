@@ -1,0 +1,27 @@
+// Fallback catalog used when the API is unavailable, so the UI is always alive.
+export const sampleProducts = [
+  { _id:'1', slug:'phantom-onyx', name:'Phantom Onyx', brand:'Vault', price:480, stock:8,
+    sizes:[8,9,10,11,12], featured:true,
+    description:'Hand-stitched Italian leather, carbon midsole, matte obsidian finish.',
+    images:['https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=1200&q=80'] },
+  { _id:'2', slug:'aurum-low', name:'Aurum Low', brand:'Maison', price:620, stock:5,
+    sizes:[8,9,10,11], featured:true,
+    description:'Brushed gold heel cup, suede upper, vulcanized cream sole.',
+    images:['https://images.unsplash.com/photo-1600185365926-3a2ce3cdb9eb?w=1200&q=80'] },
+  { _id:'3', slug:'noir-runner', name:'Noir Runner', brand:'Aether', price:340, stock:12,
+    sizes:[8,9,10,11,12,13], featured:true,
+    description:'Knit upper, responsive foam, monochrome silhouette.',
+    images:['https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=1200&q=80'] },
+  { _id:'4', slug:'velour-high', name:'Velour High', brand:'Maison', price:560, stock:6,
+    sizes:[9,10,11,12],
+    description:'Crushed velvet collar, gold eyelets, leather lining.',
+    images:['https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=1200&q=80'] },
+  { _id:'5', slug:'cipher-1', name:'Cipher 1', brand:'Vault', price:410, stock:9,
+    sizes:[8,9,10,11,12],
+    description:'Architectural midsole, sculpted heel, midnight palette.',
+    images:['https://images.unsplash.com/photo-1556906781-9a412961c28c?w=1200&q=80'] },
+  { _id:'6', slug:'eclipse-pro', name:'Eclipse Pro', brand:'Aether', price:520, stock:4,
+    sizes:[9,10,11],
+    description:'Translucent shell, reflective laces, performance comfort.',
+    images:['https://images.unsplash.com/photo-1542219550-37153d387c27?w=1200&q=80'] }
+];

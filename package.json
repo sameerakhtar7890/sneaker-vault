@@ -1,0 +1,12 @@
+{
+  "name": "sneaker-vault",
+  "version": "1.0.0",
+  "description": "Premium luxury sneaker MERN e-commerce store",
+  "scripts": {
+    "server": "npm start --prefix server",
+    "client": "npm start --prefix client",
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "install-all": "npm install && npm install --prefix server && npm install --prefix client"
+  },
+  "devDependencies": { "concurrently": "^8.2.2" }
+}
