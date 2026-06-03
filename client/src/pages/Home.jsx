@@ -1,15 +1,23 @@
 import { useEffect, useState } from 'react';
 import Hero from '../components/Hero';
 import ProductCard from '../components/ProductCard';
+import ProductSkeleton from '../components/ProductSkeleton';
 import api from '../utils/api';
-import { sampleProducts } from '../utils/sampleProducts';
 import { motion } from 'framer-motion';
 
 export default function Home() {
-  const [products, setProducts] = useState(sampleProducts);
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
-    api.get('/products?featured=true').then(r => r.data?.length && setProducts(r.data)).catch(() => {});
+    api.get('/products?featured=true')
+      .then(r => {
+        if (r.data?.products?.length) setProducts(r.data.products);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
+
   return (
     <>
       <Hero />
@@ -22,7 +30,11 @@ export default function Home() {
           </div>
         </motion.div>
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {products.slice(0, 6).map((p, i) => <ProductCard key={p._id} p={p} index={i} />)}
+          {loading ? (
+            [...Array(3)].map((_, i) => <ProductSkeleton key={i} />)
+          ) : (
+            products.slice(0, 6).map((p, i) => <ProductCard key={p._id} p={p} index={i} />)
+          )}
         </div>
       </section>
     </>

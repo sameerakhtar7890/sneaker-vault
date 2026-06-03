@@ -7,6 +7,7 @@ import authRoutes from './routes/authRoutes.js';
 import productRoutes from './routes/productRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
 import checkoutRoutes from './routes/checkoutRoutes.js';
+import uploadRoutes from './routes/uploadRoutes.js';
 import { stripeWebhook } from './controllers/paymentController.js';
 import { errorHandler, notFound } from './middleware/errorMiddleware.js';
 
@@ -27,6 +28,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/checkout', checkoutRoutes);
+app.use('/api/upload', uploadRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
