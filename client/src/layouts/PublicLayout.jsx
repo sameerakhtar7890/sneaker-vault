@@ -25,6 +25,8 @@ import OrderTracking from '../pages/OrderTracking.jsx';
 import NewsletterUnsubscribe from '../pages/NewsletterUnsubscribe.jsx';
 import FAQ from '../pages/FAQ.jsx';
 import ShippingReturns from '../pages/ShippingReturns.jsx';
+import Privacy from '../pages/Privacy.jsx';
+import Terms from '../pages/Terms.jsx';
 
 export default function PublicLayout() {
   const location = useLocation();
@@ -47,6 +49,8 @@ export default function PublicLayout() {
               <Route path="/contact" element={<Contact />} />
               <Route path="/faq" element={<FAQ />} />
               <Route path="/shipping" element={<ShippingReturns />} />
+              <Route path="/privacy" element={<Privacy />} />
+              <Route path="/terms" element={<Terms />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/wishlist" element={<Wishlist />} />

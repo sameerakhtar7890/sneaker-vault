@@ -49,8 +49,19 @@ export default function Navbar() {
       }`}
     >
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-        <Link to="/" className="font-display text-xl tracking-widest transition-opacity duration-300 hover:opacity-90">
-          SNEAKER <span className="text-gold">VAULT</span>
+        <Link
+          to="/"
+          className="flex items-center gap-2.5 font-display text-lg sm:text-xl tracking-widest transition-opacity duration-300 hover:opacity-90 group"
+        >
+          <img
+            src="/logo.svg"
+            alt=""
+            className="w-8 h-8 sm:w-9 sm:h-9 shrink-0 transition-transform duration-300 group-hover:scale-105"
+            aria-hidden
+          />
+          <span>
+            SNEAKER <span className="text-gold">VAULT</span>
+          </span>
         </Link>
 
         <nav className="hidden md:flex gap-10">

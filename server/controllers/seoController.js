@@ -15,6 +15,8 @@ const DEFAULT_PAGES = [
   { path: '/contact', title: 'Contact Us', description: 'Get in touch with the Sneaker Vault team for orders, sizing, and support.' },
   { path: '/faq', title: 'FAQ', description: 'Answers about orders, shipping, returns, sizing, and your Sneaker Vault account.' },
   { path: '/shipping', title: 'Shipping & Returns', description: 'Delivery times, tracking, 30-day returns, and refund policy.' },
+  { path: '/privacy', title: 'Privacy Policy', description: 'How Sneaker Vault collects, uses, and protects your personal information.' },
+  { path: '/terms', title: 'Terms of Service', description: 'Terms and conditions for using Sneaker Vault and placing orders.' },
   { path: '/login', title: 'Sign In', description: 'Access your Sneaker Vault account, orders, and wishlist.', noIndex: true },
   { path: '/register', title: 'Create Account', description: 'Join Sneaker Vault for faster checkout and order tracking.', noIndex: true },
   { path: '/wishlist', title: 'Your Wishlist', description: 'Saved sneakers you love.', noIndex: true },
