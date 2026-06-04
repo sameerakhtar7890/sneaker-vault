@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate, Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
 import CheckoutDetailsForm from './CheckoutDetailsForm';
+import { addressToShipping } from '../utils/addressUtils';
 
 const EMPTY_SHIPPING = {
   fullName: '', address: '', city: '', postalCode: '', country: 'US'
@@ -21,6 +22,21 @@ export default function DemoCheckoutForm({ items, pricing }) {
     fullName: user?.name || ''
   });
   const [confirmationEmail, setConfirmationEmail] = useState(user?.email || '');
+  const [selectedAddressId, setSelectedAddressId] = useState(null);
+
+  useEffect(() => {
+    if (!user) return;
+    api.get('/addresses')
+      .then(r => {
+        const list = r.data || [];
+        const def = list.find(a => a.isDefault) || list[0];
+        if (def) {
+          setSelectedAddressId(def._id);
+          setShipping(addressToShipping(def));
+        }
+      })
+      .catch(() => {});
+  }, [user?._id]);
 
   const onSubmit = async (e) => {
     e.preventDefault();
@@ -85,6 +101,8 @@ export default function DemoCheckoutForm({ items, pricing }) {
         onShippingChange={setShipping}
         confirmationEmail={confirmationEmail}
         onEmailChange={setConfirmationEmail}
+        selectedAddressId={selectedAddressId}
+        onSelectAddress={setSelectedAddressId}
       />
 
       {error && <p className="text-sm text-red-400">{error}</p>}

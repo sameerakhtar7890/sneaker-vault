@@ -550,7 +550,32 @@ async function seed() {
   const customerHash = await bcrypt.hash('Customer@1234', 10);
   const customer = await User.findOneAndUpdate(
     { email: customerEmail },
-    { name: 'Alex Rivera', email: customerEmail, password: customerHash, isAdmin: false },
+    {
+      name: 'Alex Rivera',
+      email: customerEmail,
+      password: customerHash,
+      isAdmin: false,
+      addresses: [
+        {
+          label: 'Home',
+          fullName: 'Alex Rivera',
+          address: '742 Vault Street',
+          city: 'New York',
+          postalCode: '10001',
+          country: 'US',
+          isDefault: true
+        },
+        {
+          label: 'Office',
+          fullName: 'Alex Rivera',
+          address: '88 Madison Ave, Suite 12',
+          city: 'New York',
+          postalCode: '10016',
+          country: 'US',
+          isDefault: false
+        }
+      ]
+    },
     { upsert: true, new: true }
   );
 

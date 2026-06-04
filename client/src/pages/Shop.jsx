@@ -7,6 +7,11 @@ import ProductSkeleton from '../components/ProductSkeleton';
 import SizeGuideModal from '../components/SizeGuideModal';
 import RecentlyViewedSection from '../components/RecentlyViewedSection';
 import api from '../utils/api';
+import {
+  loadOfflineCatalog,
+  filterOfflineProducts,
+  paginateOffline
+} from '../utils/offlineCatalog';
 
 const BRANDS = ['all', 'Nike', 'Adidas', 'Jordan', 'New Balance', 'Puma'];
 const SIZES = ['all', '8', '9', '10', '11', '12', '13'];
@@ -19,6 +24,7 @@ export default function Shop() {
   const [showFilters, setShowFilters] = useState(false);
   const [pageData, setPageData] = useState({ page: 1, pages: 1, total: 0 });
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
+  const [offlineMode, setOfflineMode] = useState(false);
 
   // Parse filters from URL
   const q        = searchParams.get('q') || '';
@@ -26,6 +32,7 @@ export default function Shop() {
   const size     = searchParams.get('size') || 'all';
   const maxPrice = searchParams.get('maxPrice') || '1000';
   const sort     = searchParams.get('sort') || 'newest';
+  const featured = searchParams.get('featured');
 
   const updateParams = (updates) => {
     const current = Object.fromEntries(searchParams.entries());
@@ -44,17 +51,30 @@ export default function Shop() {
 
     api.get('/products', { params })
       .then(r => {
+        setOfflineMode(false);
         if (page === 1) setProducts(r.data.products);
         else setProducts(prev => [...prev, ...r.data.products]);
         setPageData({ page: r.data.page, pages: r.data.pages, total: r.data.total });
       })
-      .catch(console.error)
+      .catch(() => {
+        const catalog = loadOfflineCatalog();
+        if (!catalog?.products?.length) return;
+        setOfflineMode(true);
+        const filtered = filterOfflineProducts(catalog.products, {
+          q, brand, size, maxPrice, sort,
+          featured: featured === 'true'
+        });
+        const paged = paginateOffline(filtered, page, 6);
+        if (page === 1) setProducts(paged.products);
+        else setProducts(prev => [...prev, ...paged.products]);
+        setPageData({ page: paged.page, pages: paged.pages, total: paged.total });
+      })
       .finally(() => { setLoading(false); setLoadingMore(false); });
   };
 
   useEffect(() => {
     fetchProducts(1);
-  }, [q, brand, size, maxPrice, sort]);
+  }, [q, brand, size, maxPrice, sort, featured]);
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-12">
@@ -67,7 +87,12 @@ export default function Shop() {
         <div>
           <p className="section-eyebrow mb-2">CURATED SELECTION</p>
           <h1 className="font-display text-4xl md:text-5xl">The Shop</h1>
-          <p className="text-zinc-400 mt-2 text-sm">{pageData.total || products.length} pairs found</p>
+          <p className="text-zinc-400 mt-2 text-sm">
+            {pageData.total || products.length} pairs found
+            {offlineMode && (
+              <span className="ml-2 text-amber-400/90">(offline catalog)</span>
+            )}
+          </p>
         </div>
 
         {/* Search Bar, Sort & Mobile Filter Toggle */}

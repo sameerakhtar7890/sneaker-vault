@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Lock, Check, Package, AlertCircle, RotateCcw, Bell } from 'lucide-react';
+import { User, Lock, Check, Package, AlertCircle, RotateCcw, Bell, MapPin } from 'lucide-react';
+import AddressBook from '../components/AddressBook';
 import { RETURN_STATUS_STYLE, REASON_LABELS } from '../components/ReturnRequestModal';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
@@ -9,7 +10,17 @@ import { Link } from 'react-router-dom';
 export default function Profile() {
   const { user } = useAuth();
   
-  const [activeTab, setActiveTab] = useState('settings'); // 'settings' | 'orders' | 'returns'
+  const [activeTab, setActiveTab] = useState(() =>
+    sessionStorage.getItem('sv_profile_tab') || 'settings'
+  );
+
+  useEffect(() => {
+    const tab = sessionStorage.getItem('sv_profile_tab');
+    if (tab) {
+      setActiveTab(tab);
+      sessionStorage.removeItem('sv_profile_tab');
+    }
+  }, []);
   const [orders, setOrders] = useState([]);
   const [returns, setReturns] = useState([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
@@ -85,7 +96,7 @@ export default function Profile() {
   }[s] || 'text-zinc-400 bg-zinc-400/10');
 
   return (
-    <div className="max-w-4xl mx-auto px-6 py-12">
+    <div className={`mx-auto px-6 py-12 ${activeTab === 'addresses' ? 'max-w-5xl' : 'max-w-4xl'}`}>
       <AnimatePresence>
         {toast && (
           <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
@@ -110,6 +121,13 @@ export default function Profile() {
             activeTab === 'settings' ? 'border-gold text-gold' : 'border-transparent text-zinc-400 hover:text-zinc-200'
           }`}>
           Profile Settings
+        </button>
+        <button 
+          onClick={() => setActiveTab('addresses')}
+          className={`pb-2 text-sm font-medium tracking-wide transition border-b-2 ${
+            activeTab === 'addresses' ? 'border-gold text-gold' : 'border-transparent text-zinc-400 hover:text-zinc-200'
+          }`}>
+          Address Book
         </button>
         <button 
           onClick={() => setActiveTab('orders')}
@@ -199,6 +217,12 @@ export default function Profile() {
               {saving ? 'Updating...' : 'Update Profile'}
             </button>
           </form>
+        </motion.div>
+      )}
+
+      {activeTab === 'addresses' && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+          <AddressBook />
         </motion.div>
       )}
 

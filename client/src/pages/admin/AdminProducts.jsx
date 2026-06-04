@@ -5,7 +5,8 @@ import api from '../../utils/api';
 
 const EMPTY = {
   name: '', brand: '', price: '', description: '',
-  images: '', sizes: '', stock: '', featured: false
+  images: '', sizes: '', stock: '', featured: false,
+  seoTitle: '', seoDescription: '', ogImage: ''
 };
 
 function Modal({ title, onClose, children }) {
@@ -59,7 +60,10 @@ export default function AdminProducts() {
       description: p.description || '',
       images: (p.images || []).join(', '),
       sizes:  (p.sizes  || []).join(', '),
-      stock:  p.stock, featured: p.featured || false
+      stock:  p.stock, featured: p.featured || false,
+      seoTitle: p.seoTitle || '',
+      seoDescription: p.seoDescription || '',
+      ogImage: p.ogImage || ''
     });
     setEditing(p);
     setError('');
@@ -80,6 +84,9 @@ export default function AdminProducts() {
     sizes:       form.sizes.split(',').map(s => Number(s.trim())).filter(Boolean),
     stock:       Number(form.stock),
     featured:    form.featured,
+    seoTitle:       form.seoTitle.trim() || undefined,
+    seoDescription: form.seoDescription.trim() || undefined,
+    ogImage:        form.ogImage.trim() || undefined
   });
 
   const save = async () => {
@@ -245,6 +252,18 @@ export default function AdminProducts() {
               <Field label="Description">
                 <textarea className={`${inp} resize-none h-24`} name="description" value={form.description} onChange={handle} />
               </Field>
+              <div className="border-t border-white/10 pt-4 space-y-3">
+                <p className="text-xs text-zinc-500 uppercase tracking-wider">SEO (optional)</p>
+                <Field label="SEO title">
+                  <input className={inp} name="seoTitle" value={form.seoTitle} onChange={handle} placeholder="Custom page title" />
+                </Field>
+                <Field label="SEO description">
+                  <textarea className={`${inp} resize-none h-16`} name="seoDescription" value={form.seoDescription} onChange={handle} placeholder="Meta description for search & social" />
+                </Field>
+                <Field label="OG image URL">
+                  <input className={inp} name="ogImage" value={form.ogImage} onChange={handle} placeholder="Leave blank to use first product image" />
+                </Field>
+              </div>
               <label className="flex items-center gap-3 cursor-pointer text-sm text-zinc-300">
                 <input type="checkbox" name="featured" checked={form.featured} onChange={handle}
                   className="w-4 h-4 accent-gold rounded" />

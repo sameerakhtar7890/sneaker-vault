@@ -1,16 +1,22 @@
 import { Link, NavLink, useNavigate } from 'react-router-dom';
-import { ShoppingBag, User, LogOut, LayoutDashboard, LogIn, Heart } from 'lucide-react';
+import { ShoppingBag, User, LogOut, LayoutDashboard, LogIn, Heart, GitCompare, Download } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useRef, useEffect } from 'react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
+import { useCompare } from '../context/CompareContext';
+import { usePWA } from '../context/PWAContext';
+import PWAInstallModal from './PWAInstallModal';
 
 export default function Navbar() {
   const { count, setOpen } = useCart();
+  const { count: compareCount } = useCompare();
   const { user, logout } = useAuth();
+  const { isInstalled } = usePWA();
   const navigate = useNavigate();
   const [dropOpen, setDropOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [installOpen, setInstallOpen] = useState(false);
   const dropRef = useRef(null);
 
   useEffect(() => {
@@ -54,8 +60,38 @@ export default function Navbar() {
         </nav>
 
         <div className="flex items-center gap-1">
+          {!isInstalled && (
+            <button
+              type="button"
+              onClick={() => setInstallOpen(true)}
+              className={`${iconBtn} flex items-center gap-1.5 sm:px-3 text-gold sm:border sm:border-gold/25`}
+              title="Install app"
+              aria-label="Install app"
+            >
+              <Download size={18} />
+              <span className="hidden sm:inline text-xs font-medium">Install</span>
+            </button>
+          )}
+
           <Link to="/wishlist" className={iconBtn} aria-label="Wishlist">
             <Heart size={18} className="text-zinc-300 hover:text-gold transition-colors" />
+          </Link>
+
+          <Link to="/compare" className={`${iconBtn} relative`} aria-label="Compare products">
+            <GitCompare size={18} className="text-zinc-300 hover:text-gold transition-colors" />
+            <AnimatePresence>
+              {compareCount > 0 && (
+                <motion.span
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  exit={{ scale: 0 }}
+                  className="absolute -top-0.5 -right-0.5 text-[10px] bg-gold text-ink-950
+                             rounded-full min-w-[18px] h-[18px] px-1 grid place-items-center font-bold shadow-glow-sm"
+                >
+                  {compareCount}
+                </motion.span>
+              )}
+            </AnimatePresence>
           </Link>
 
           <button id="nav-cart" onClick={() => setOpen(true)} className={`${iconBtn} relative`} aria-label="Cart">
@@ -124,6 +160,7 @@ export default function Navbar() {
           )}
         </div>
       </div>
+      <PWAInstallModal open={installOpen} onClose={() => setInstallOpen(false)} />
     </motion.header>
   );
 }

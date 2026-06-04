@@ -1,11 +1,14 @@
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { Heart } from 'lucide-react';
+import { Heart, GitCompare } from 'lucide-react';
 import { useCart } from '../context/CartContext';
+import { useCompare } from '../context/CompareContext';
 
 export default function ProductCard({ p, index = 0 }) {
   const { wishlist, toggleWish } = useCart();
+  const { isInCompare, toggleCompare } = useCompare();
   const liked = wishlist.includes(p._id);
+  const comparing = isInCompare(p._id);
 
   return (
     <motion.article
@@ -30,16 +33,28 @@ export default function ProductCard({ p, index = 0 }) {
             className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
           />
         </div>
-        <motion.button
-          whileTap={{ scale: 0.9 }}
-          onClick={(e) => { e.preventDefault(); toggleWish(p._id); }}
-          className="absolute top-3 right-3 glass-strong rounded-full p-2.5 hover:bg-gold/10 z-10 transition-colors duration-300"
-        >
-          <Heart
-            size={16}
-            className={`transition-all duration-300 ${liked ? 'fill-gold text-gold scale-110' : 'text-zinc-300'}`}
-          />
-        </motion.button>
+        <div className="absolute top-3 right-3 flex flex-col gap-2 z-10">
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={(e) => { e.preventDefault(); toggleCompare(p._id); }}
+            className={`glass-strong rounded-full p-2.5 transition-colors duration-300 ${
+              comparing ? 'bg-gold/20 text-gold' : 'hover:bg-gold/10 text-zinc-300'
+            }`}
+            aria-label={comparing ? 'Remove from compare' : 'Add to compare'}
+          >
+            <GitCompare size={16} className={comparing ? 'scale-110' : ''} />
+          </motion.button>
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={(e) => { e.preventDefault(); toggleWish(p._id); }}
+            className="glass-strong rounded-full p-2.5 hover:bg-gold/10 transition-colors duration-300"
+          >
+            <Heart
+              size={16}
+              className={`transition-all duration-300 ${liked ? 'fill-gold text-gold scale-110' : 'text-zinc-300'}`}
+            />
+          </motion.button>
+        </div>
 
         {p.stock === 0 ? (
           <div className="absolute top-3 left-3 bg-red-500/90 backdrop-blur-sm text-white text-[10px] uppercase tracking-wider px-2.5 py-1 rounded-full font-semibold z-10">

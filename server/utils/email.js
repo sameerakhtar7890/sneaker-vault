@@ -124,3 +124,55 @@ export async function sendOrderConfirmationEmail(recipient, order) {
   const { subject, html, text } = buildOrderConfirmationEmail(recipient, order);
   return sendMail({ to: recipient.email, subject, html, text });
 }
+
+export function buildNewsletterWelcomeEmail(email, unsubscribeUrl) {
+  const html = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#0f0f14;font-family:Georgia,serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#0f0f14;padding:40px 20px;">
+    <tr><td align="center">
+      <table width="560" cellpadding="0" cellspacing="0" style="background:#18181f;border-radius:16px;overflow:hidden;border:1px solid #2a2a35;">
+        <tr>
+          <td style="padding:32px 40px;background:linear-gradient(135deg,#1a1a24,#0f0f14);border-bottom:1px solid #2a2a35;">
+            <p style="margin:0 0 4px;font-size:11px;letter-spacing:0.3em;color:#d4af37;text-transform:uppercase;">Sneaker Vault</p>
+            <h1 style="margin:0;font-size:28px;color:#fafafa;font-weight:normal;">You're on the list</h1>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:32px 40px;">
+            <p style="margin:0 0 16px;color:#a1a1aa;font-size:15px;line-height:1.6;">
+              Thanks for subscribing. You'll be first to hear about exclusive drops, restocks, and vault-only offers.
+            </p>
+            <p style="margin:0 0 24px;color:#71717a;font-size:13px;">Subscribed as <strong style="color:#e4e4e7;">${email}</strong></p>
+            <a href="${APP_URL}/shop" style="display:inline-block;background:#d4af37;color:#0a0a0f;padding:14px 28px;border-radius:999px;text-decoration:none;font-size:14px;font-weight:600;">Explore the Vault</a>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:20px 40px 32px;border-top:1px solid #2a2a35;">
+            <p style="margin:0;font-size:11px;color:#52525b;line-height:1.5;">
+              <a href="${unsubscribeUrl}" style="color:#71717a;">Unsubscribe</a> from these emails anytime.
+            </p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
+  const text = `You're subscribed to Sneaker Vault updates at ${email}. Shop: ${APP_URL}/shop. Unsubscribe: ${unsubscribeUrl}`;
+
+  return {
+    subject: 'Welcome to Sneaker Vault — You\'re subscribed',
+    html,
+    text
+  };
+}
+
+export async function sendNewsletterWelcomeEmail(email, unsubscribeToken) {
+  const unsubscribeUrl = `${APP_URL}/newsletter/unsubscribe?token=${unsubscribeToken}`;
+  const { subject, html, text } = buildNewsletterWelcomeEmail(email, unsubscribeUrl);
+  return sendMail({ to: email, subject, html, text });
+}

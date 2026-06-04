@@ -1,7 +1,8 @@
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LayoutDashboard, Package, ShoppingBag, LogOut, Tag, Ruler, RotateCcw } from 'lucide-react';
+import { LayoutDashboard, Package, ShoppingBag, LogOut, Tag, Ruler, RotateCcw, Mail, Globe } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import SeoMeta from '../../components/SeoMeta';
 
 const links = [
   { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true },
@@ -10,6 +11,8 @@ const links = [
   { to: '/admin/returns', label: 'Returns', icon: RotateCcw },
   { to: '/admin/coupons', label: 'Coupons', icon: Tag },
   { to: '/admin/size-guides', label: 'Size Guides', icon: Ruler },
+  { to: '/admin/newsletter', label: 'Newsletter', icon: Mail },
+  { to: '/admin/seo', label: 'SEO', icon: Globe },
 ];
 
 export default function AdminLayout() {
@@ -21,6 +24,7 @@ export default function AdminLayout() {
 
   return (
     <div className="min-h-screen flex bg-ink-950">
+      <SeoMeta title="Admin Panel | Sneaker Vault" description="Sneaker Vault administration" noIndex />
       <aside className="w-60 shrink-0 glass-strong border-r border-white/10 flex flex-col py-8 px-4">
         <div className="mb-10 px-2">
           <p className="text-[10px] tracking-[0.3em] text-zinc-500 uppercase mb-1">Admin Panel</p>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -6,6 +6,7 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
 import CheckoutDetailsForm from './CheckoutDetailsForm';
+import { addressToShipping } from '../utils/addressUtils';
 
 const EMPTY_SHIPPING = {
   fullName: '', address: '', city: '', postalCode: '', country: 'US'
@@ -24,6 +25,21 @@ export default function CheckoutForm({ finalTotal, pricing, paymentIntentId, ite
     fullName: user?.name || ''
   });
   const [confirmationEmail, setConfirmationEmail] = useState(user?.email || '');
+  const [selectedAddressId, setSelectedAddressId] = useState(null);
+
+  useEffect(() => {
+    if (!user) return;
+    api.get('/addresses')
+      .then(r => {
+        const list = r.data || [];
+        const def = list.find(a => a.isDefault) || list[0];
+        if (def) {
+          setSelectedAddressId(def._id);
+          setShipping(addressToShipping(def));
+        }
+      })
+      .catch(() => {});
+  }, [user?._id]);
 
   const completeOrderOnServer = async () => {
     const { data } = await api.post('/checkout/complete-order', {
@@ -112,6 +128,8 @@ export default function CheckoutForm({ finalTotal, pricing, paymentIntentId, ite
         onShippingChange={setShipping}
         confirmationEmail={confirmationEmail}
         onEmailChange={setConfirmationEmail}
+        selectedAddressId={selectedAddressId}
+        onSelectAddress={setSelectedAddressId}
       />
 
       <div className="glass rounded-2xl p-6 space-y-5">

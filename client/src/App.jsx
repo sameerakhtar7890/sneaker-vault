@@ -9,6 +9,8 @@ import AdminOrders from './pages/admin/AdminOrders.jsx';
 import AdminCoupons from './pages/admin/AdminCoupons.jsx';
 import AdminSizeGuides from './pages/admin/AdminSizeGuides.jsx';
 import AdminReturns from './pages/admin/AdminReturns.jsx';
+import AdminNewsletter from './pages/admin/AdminNewsletter.jsx';
+import AdminSeo from './pages/admin/AdminSeo.jsx';
 
 export default function App() {
   return (
@@ -24,6 +26,8 @@ export default function App() {
         <Route path="returns" element={<AdminReturns />} />
         <Route path="coupons" element={<AdminCoupons />} />
         <Route path="size-guides" element={<AdminSizeGuides />} />
+        <Route path="newsletter" element={<AdminNewsletter />} />
+        <Route path="seo" element={<AdminSeo />} />
       </Route>
 
       <Route path="/*" element={<PublicLayout />} />

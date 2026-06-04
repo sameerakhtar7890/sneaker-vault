@@ -12,6 +12,7 @@ export const register = asyncHandler(async (req, res) => {
     _id: user._id, name: user.name, email: user.email,
     isAdmin: user.isAdmin, wishlist: user.wishlist,
     emailNotifications: user.emailNotifications,
+    addresses: user.addresses || [],
     token: sign(user._id)
   });
 });
@@ -26,11 +27,22 @@ export const login = asyncHandler(async (req, res) => {
     _id: user._id, name: user.name, email: user.email,
     isAdmin: user.isAdmin, wishlist: user.wishlist,
     emailNotifications: user.emailNotifications,
+    addresses: user.addresses || [],
     token: sign(user._id)
   });
 });
 
-export const me = asyncHandler(async (req, res) => res.json(req.user));
+export const me = asyncHandler(async (req, res) => {
+  res.json({
+    _id: req.user._id,
+    name: req.user.name,
+    email: req.user.email,
+    isAdmin: req.user.isAdmin,
+    wishlist: req.user.wishlist,
+    emailNotifications: req.user.emailNotifications,
+    addresses: req.user.addresses || []
+  });
+});
 
 export const updateProfile = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id);
@@ -52,6 +64,7 @@ export const updateProfile = asyncHandler(async (req, res) => {
     isAdmin: updatedUser.isAdmin,
     wishlist: updatedUser.wishlist,
     emailNotifications: updatedUser.emailNotifications,
+    addresses: updatedUser.addresses || [],
     token: sign(updatedUser._id)
   });
 });

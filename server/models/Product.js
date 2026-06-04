@@ -21,7 +21,10 @@ const productSchema = new mongoose.Schema({
   featured:    { type: Boolean, default: false, index: true },
   reviews:     [reviewSchema],
   rating:      { type: Number, default: 0 },
-  numReviews:  { type: Number, default: 0 }
+  numReviews:  { type: Number, default: 0 },
+  seoTitle:       { type: String, trim: true, maxlength: 120 },
+  seoDescription: { type: String, trim: true, maxlength: 320 },
+  ogImage:        { type: String, trim: true }
 }, { timestamps: true });
 
 productSchema.pre('validate', function (next) {

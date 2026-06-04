@@ -1,8 +1,16 @@
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Facebook, Twitter, Instagram, Github } from 'lucide-react';
+import { useState } from 'react';
+import { Download } from 'lucide-react';
+import NewsletterSignup from './NewsletterSignup';
+import { usePWA } from '../context/PWAContext';
+import PWAInstallModal from './PWAInstallModal';
 
 export default function Footer() {
+  const { isInstalled } = usePWA();
+  const [installOpen, setInstallOpen] = useState(false);
+
   return (
     <motion.footer
       initial={{ opacity: 0 }}
@@ -56,16 +64,16 @@ export default function Footer() {
           <div>
             <h3 className="text-white font-semibold mb-4 tracking-wide uppercase text-sm">Stay Updated</h3>
             <p className="text-sm text-zinc-400 mb-4">Subscribe for exclusive drops and early access.</p>
-            <form className="flex" onSubmit={e => e.preventDefault()}>
-              <input
-                type="email"
-                placeholder="Enter your email"
-                className="input-premium rounded-l-xl rounded-r-none border-r-0"
-              />
-              <button className="bg-gold text-ink-950 px-5 font-semibold rounded-r-xl hover:bg-gold-soft transition-all duration-300 text-sm hover:shadow-glow-sm">
-                Join
+            <NewsletterSignup />
+            {!isInstalled && (
+              <button
+                type="button"
+                onClick={() => setInstallOpen(true)}
+                className="mt-4 w-full flex items-center justify-center gap-2 text-sm py-2.5 rounded-xl border border-gold/30 text-gold hover:bg-gold/10 transition"
+              >
+                <Download size={16} /> Install app on your device
               </button>
-            </form>
+            )}
           </div>
         </div>
 
@@ -79,6 +87,7 @@ export default function Footer() {
           </div>
         </div>
       </div>
+      <PWAInstallModal open={installOpen} onClose={() => setInstallOpen(false)} />
     </motion.footer>
   );
 }

@@ -4,6 +4,7 @@ import ProductCard from '../components/ProductCard';
 import ProductSkeleton from '../components/ProductSkeleton';
 import RecentlyViewedSection from '../components/RecentlyViewedSection';
 import api from '../utils/api';
+import { loadOfflineCatalog, filterOfflineProducts } from '../utils/offlineCatalog';
 import { motion } from 'framer-motion';
 
 export default function Home() {
@@ -15,7 +16,20 @@ export default function Home() {
       .then(r => {
         if (r.data?.products?.length) setProducts(r.data.products);
       })
-      .catch(() => {})
+      .catch(() => {
+        const catalog = loadOfflineCatalog();
+        if (catalog?.products?.length) {
+          const featured = filterOfflineProducts(catalog.products, {
+            featured: true,
+            brand: 'all',
+            size: 'all',
+            maxPrice: '1000',
+            sort: 'newest',
+            q: ''
+          });
+          setProducts(featured.slice(0, 6));
+        }
+      })
       .finally(() => setLoading(false));
   }, []);
 
