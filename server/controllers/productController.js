@@ -1,5 +1,7 @@
 import asyncHandler from 'express-async-handler';
 import Product from '../models/Product.js';
+import StockAlert from '../models/StockAlert.js';
+import { sendBackInStockEmail } from '../utils/email.js';
 
 const SORT_MAP = {
   newest:     { createdAt: -1 },
@@ -48,8 +50,29 @@ export const createProduct = asyncHandler(async (req, res) => {
 export const updateProduct = asyncHandler(async (req, res) => {
   const product = await Product.findById(req.params.id);
   if (!product) { res.status(404); throw new Error('Product not found'); }
+
+  const wasOutOfStock = product.stock === 0;
+  const isRestocked = wasOutOfStock && req.body.stock !== undefined && Number(req.body.stock) > 0;
+
   Object.assign(product, req.body);
   const updated = await product.save();
+
+  if (isRestocked) {
+    // Find pending alerts and send restock emails
+    const alerts = await StockAlert.find({ product: product._id, status: 'pending' });
+    if (alerts.length > 0) {
+      Promise.all(alerts.map(async (alert) => {
+        try {
+          await sendBackInStockEmail(alert.email, updated);
+          alert.status = 'notified';
+          await alert.save();
+        } catch (err) {
+          console.error(`Failed to send back-in-stock email to ${alert.email}:`, err.message);
+        }
+      })).catch(console.error);
+    }
+  }
+
   res.json(updated);
 });
 
@@ -59,6 +82,16 @@ export const deleteProduct = asyncHandler(async (req, res) => {
   await product.deleteOne();
   res.json({ message: 'Product deleted' });
 });
+
+const updateProductRating = (product) => {
+  const approvedReviews = product.reviews.filter(r => r.approved);
+  product.numReviews = approvedReviews.length;
+  if (approvedReviews.length === 0) {
+    product.rating = 0;
+  } else {
+    product.rating = approvedReviews.reduce((acc, item) => item.rating + acc, 0) / approvedReviews.length;
+  }
+};
 
 export const addReview = asyncHandler(async (req, res) => {
   const { rating, comment } = req.body;
@@ -75,13 +108,67 @@ export const addReview = asyncHandler(async (req, res) => {
     user: req.user._id,
     name: req.user.name,
     rating: Number(rating),
-    comment
+    comment,
+    approved: false
   };
 
   product.reviews.push(review);
-  product.numReviews = product.reviews.length;
-  product.rating = product.reviews.reduce((acc, item) => item.rating + acc, 0) / product.reviews.length;
+  updateProductRating(product);
 
   await product.save();
-  res.status(201).json({ message: 'Review added' });
+  res.status(201).json({ message: 'Review added. Waiting for admin approval.' });
+});
+
+// Admin Review Moderation Controllers
+export const getPendingReviews = asyncHandler(async (req, res) => {
+  const products = await Product.find({ 'reviews.approved': false });
+  let pending = [];
+  products.forEach(p => {
+    p.reviews.forEach(r => {
+      if (!r.approved) {
+        pending.push({
+          _id: r._id,
+          productId: p._id,
+          productName: p.name,
+          productSlug: p.slug,
+          user: r.user,
+          name: r.name,
+          rating: r.rating,
+          comment: r.comment,
+          createdAt: r.createdAt
+        });
+      }
+    });
+  });
+  res.json(pending);
+});
+
+export const approveReview = asyncHandler(async (req, res) => {
+  const { productId, reviewId } = req.params;
+  const product = await Product.findById(productId);
+  if (!product) { res.status(404); throw new Error('Product not found'); }
+
+  const review = product.reviews.id(reviewId);
+  if (!review) { res.status(404); throw new Error('Review not found'); }
+
+  review.approved = true;
+  updateProductRating(product);
+  await product.save();
+
+  res.json({ message: 'Review approved' });
+});
+
+export const deleteReview = asyncHandler(async (req, res) => {
+  const { productId, reviewId } = req.params;
+  const product = await Product.findById(productId);
+  if (!product) { res.status(404); throw new Error('Product not found'); }
+
+  const review = product.reviews.id(reviewId);
+  if (!review) { res.status(404); throw new Error('Review not found'); }
+
+  product.reviews.pull(reviewId);
+  updateProductRating(product);
+  await product.save();
+
+  res.json({ message: 'Review deleted' });
 });

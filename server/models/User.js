@@ -23,7 +23,9 @@ const userSchema = new mongoose.Schema({
     product:  { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
     viewedAt: { type: Date, default: Date.now }
   }],
-  addresses: [addressSchema]
+  addresses: [addressSchema],
+  resetPasswordToken:   { type: String },
+  resetPasswordExpires: { type: Date }
 }, { timestamps: true });
 
 const MAX_ADDRESSES = 10;

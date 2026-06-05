@@ -12,7 +12,12 @@ const EMPTY_SHIPPING = {
   fullName: '', address: '', city: '', postalCode: '', country: 'US'
 };
 
-export default function CheckoutForm({ finalTotal, pricing, paymentIntentId, items }) {
+export default function CheckoutForm({
+  finalTotal, pricing, paymentIntentId, items,
+  shipping, onShippingChange,
+  confirmationEmail, onEmailChange,
+  selectedAddressId, onSelectAddress
+}) {
   const stripe = useStripe();
   const elements = useElements();
   const navigate = useNavigate();
@@ -20,26 +25,6 @@ export default function CheckoutForm({ finalTotal, pricing, paymentIntentId, ite
   const { user } = useAuth();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
-  const [shipping, setShipping] = useState({
-    ...EMPTY_SHIPPING,
-    fullName: user?.name || ''
-  });
-  const [confirmationEmail, setConfirmationEmail] = useState(user?.email || '');
-  const [selectedAddressId, setSelectedAddressId] = useState(null);
-
-  useEffect(() => {
-    if (!user) return;
-    api.get('/addresses')
-      .then(r => {
-        const list = r.data || [];
-        const def = list.find(a => a.isDefault) || list[0];
-        if (def) {
-          setSelectedAddressId(def._id);
-          setShipping(addressToShipping(def));
-        }
-      })
-      .catch(() => {});
-  }, [user?._id]);
 
   const completeOrderOnServer = async () => {
     const { data } = await api.post('/checkout/complete-order', {
@@ -49,6 +34,7 @@ export default function CheckoutForm({ finalTotal, pricing, paymentIntentId, ite
       confirmation_email: confirmationEmail.trim(),
       subtotal: pricing.subtotal,
       discount_amount: pricing.discountAmount,
+      shipping_cost: pricing.shippingCost,
       coupon_code: pricing.couponCode || null,
       total_price: pricing.total
     });
@@ -77,6 +63,7 @@ export default function CheckoutForm({ finalTotal, pricing, paymentIntentId, ite
       confirmation_email: confirmationEmail.trim(),
       subtotal: pricing.subtotal,
       discount_amount: pricing.discountAmount,
+      shipping_cost: pricing.shippingCost,
       coupon_code: pricing.couponCode || null,
       total_price: pricing.total
     };

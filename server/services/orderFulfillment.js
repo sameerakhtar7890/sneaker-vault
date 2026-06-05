@@ -19,10 +19,11 @@ export function buildCartItemsFromClient(items) {
   }));
 }
 
-export function validateOrderTotals(cartItems, { subtotal, discount_amount, total_price }) {
+export function validateOrderTotals(cartItems, { subtotal, discount_amount, shipping_cost, total_price }) {
   const computedSubtotal = calcSubtotal(cartItems.map(i => ({ price: i.price, qty: i.qty })));
   const discount = Number(discount_amount) || 0;
-  const computedTotal = Math.round((computedSubtotal - discount) * 100) / 100;
+  const shipping = Number(shipping_cost) || 0;
+  const computedTotal = Math.round((computedSubtotal - discount + shipping) * 100) / 100;
 
   if (Math.abs(computedSubtotal - Number(subtotal)) > 0.02) {
     throw new Error('Order subtotal mismatch');
@@ -94,6 +95,7 @@ export async function fulfillOrder({
   payment_intent_id,
   subtotal,
   discount_amount,
+  shipping_cost = 0,
   coupon_code,
   total_price
 }) {
@@ -106,7 +108,7 @@ export async function fulfillOrder({
     if (!user) throw new Error('User not found');
   }
 
-  validateOrderTotals(cart_items, { subtotal, discount_amount, total_price });
+  validateOrderTotals(cart_items, { subtotal, discount_amount, shipping_cost, total_price });
 
   let order = payment_intent_id
     ? await Order.findOne({ payment_intent_id })
@@ -121,6 +123,7 @@ export async function fulfillOrder({
       shipping_address,
       subtotal,
       discount_amount: discount_amount || 0,
+      shipping_cost: shipping_cost || 0,
       coupon_code: coupon_code || null,
       total_price,
       payment_intent_id: payment_intent_id || undefined,
@@ -129,6 +132,7 @@ export async function fulfillOrder({
     });
   } else {
     order.confirmation_email = email;
+    order.shipping_cost = shipping_cost || 0;
     if (order.payment_status !== 'paid') {
       order.payment_status = 'paid';
       order.status = 'processing';

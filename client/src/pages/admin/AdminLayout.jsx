@@ -1,6 +1,6 @@
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LayoutDashboard, Package, ShoppingBag, LogOut, Tag, Ruler, RotateCcw, Mail, Globe } from 'lucide-react';
+import { LayoutDashboard, Package, ShoppingBag, LogOut, Tag, Ruler, RotateCcw, Mail, Globe, Truck, MessageSquare } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import SeoMeta from '../../components/SeoMeta';
 
@@ -9,10 +9,12 @@ const links = [
   { to: '/admin/products', label: 'Products', icon: Package },
   { to: '/admin/orders', label: 'Orders', icon: ShoppingBag },
   { to: '/admin/returns', label: 'Returns', icon: RotateCcw },
+  { to: '/admin/reviews', label: 'Reviews', icon: MessageSquare },
   { to: '/admin/coupons', label: 'Coupons', icon: Tag },
   { to: '/admin/size-guides', label: 'Size Guides', icon: Ruler },
   { to: '/admin/newsletter', label: 'Newsletter', icon: Mail },
   { to: '/admin/seo', label: 'SEO', icon: Globe },
+  { to: '/admin/shipping-zones', label: 'Shipping', icon: Truck },
 ];
 
 export default function AdminLayout() {

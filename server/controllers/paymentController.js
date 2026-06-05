@@ -4,6 +4,7 @@ import Order from '../models/Order.js';
 import Coupon from '../models/Coupon.js';
 import User from '../models/User.js';
 import { applyCoupon, calcSubtotal } from '../utils/couponUtils.js';
+import { calculateShippingCost } from './shippingZoneController.js';
 import {
   buildCartItemsFromClient,
   fulfillOrder,
@@ -16,18 +17,33 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder'
 const isDemoStripe = () =>
   !process.env.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY.includes('placeholder');
 
-async function resolveCheckoutTotals(items, couponCode) {
+async function resolveCheckoutTotals(items, couponCode, shippingCountry) {
   const subtotal = calcSubtotal(items);
   if (!subtotal) throw new Error('Invalid cart total');
 
-  if (!couponCode?.trim()) {
-    return { subtotal, discountAmount: 0, total: subtotal, couponCode: null };
+  let discountAmount = 0;
+  let appliedCouponCode = null;
+
+  if (couponCode?.trim()) {
+    const coupon = await Coupon.findOne({ code: couponCode.trim().toUpperCase() });
+    if (coupon) {
+      const result = applyCoupon(coupon, subtotal);
+      discountAmount = result.discountAmount;
+      appliedCouponCode = result.couponCode;
+    }
   }
 
-  const coupon = await Coupon.findOne({ code: couponCode.trim().toUpperCase() });
-  if (!coupon) throw new Error('Invalid promo code');
+  const { shippingCost, zoneName } = await calculateShippingCost(shippingCountry, subtotal);
+  const total = Math.max(0, Math.round((subtotal - discountAmount + shippingCost) * 100) / 100);
 
-  return applyCoupon(coupon, subtotal);
+  return {
+    subtotal,
+    discountAmount,
+    shippingCost,
+    total,
+    couponCode: appliedCouponCode,
+    shippingZone: zoneName
+  };
 }
 
 function paymentOwnerId(req) {
@@ -43,11 +59,14 @@ export const createPaymentIntent = asyncHandler(async (req, res) => {
     throw new Error('Stripe is not configured — use demo checkout');
   }
 
-  const { items = [], currency = 'usd', metadata = {}, couponCode, confirmation_email } = req.body;
+  const {
+    items = [], currency = 'usd', metadata = {}, couponCode,
+    confirmation_email, shippingAddress, paymentIntentId
+  } = req.body;
 
   let totals;
   try {
-    totals = await resolveCheckoutTotals(items, couponCode);
+    totals = await resolveCheckoutTotals(items, couponCode, shippingAddress?.country || 'US');
   } catch (err) {
     res.status(400);
     throw err;
@@ -56,18 +75,35 @@ export const createPaymentIntent = asyncHandler(async (req, res) => {
   const amount = Math.round(totals.total * 100);
   if (!amount || amount < 50) { res.status(400); throw new Error('Invalid cart total'); }
 
-  const intent = await stripe.paymentIntents.create({
-    amount, currency,
-    automatic_payment_methods: { enabled: true },
-    metadata: {
-      ...metadata,
-      userId: paymentOwnerId(req),
-      confirmationEmail: normalizeEmail(confirmation_email) || '',
-      subtotal: totals.subtotal.toFixed(2),
-      discountAmount: totals.discountAmount.toFixed(2),
-      couponCode: totals.couponCode || ''
-    }
-  });
+  let intent;
+  if (paymentIntentId) {
+    intent = await stripe.paymentIntents.update(paymentIntentId, {
+      amount,
+      metadata: {
+        ...metadata,
+        userId: paymentOwnerId(req),
+        confirmationEmail: normalizeEmail(confirmation_email) || '',
+        subtotal: totals.subtotal.toFixed(2),
+        discountAmount: totals.discountAmount.toFixed(2),
+        shippingCost: totals.shippingCost.toFixed(2),
+        couponCode: totals.couponCode || ''
+      }
+    });
+  } else {
+    intent = await stripe.paymentIntents.create({
+      amount, currency,
+      automatic_payment_methods: { enabled: true },
+      metadata: {
+        ...metadata,
+        userId: paymentOwnerId(req),
+        confirmationEmail: normalizeEmail(confirmation_email) || '',
+        subtotal: totals.subtotal.toFixed(2),
+        discountAmount: totals.discountAmount.toFixed(2),
+        shippingCost: totals.shippingCost.toFixed(2),
+        couponCode: totals.couponCode || ''
+      }
+    });
+  }
 
   res.json({
     clientSecret: intent.client_secret,
@@ -75,6 +111,7 @@ export const createPaymentIntent = asyncHandler(async (req, res) => {
     amount,
     subtotal: totals.subtotal,
     discountAmount: totals.discountAmount,
+    shippingCost: totals.shippingCost,
     total: totals.total,
     couponCode: totals.couponCode
   });
@@ -103,7 +140,7 @@ function assertPaymentOwnership(intent, req) {
 export const completeOrder = asyncHandler(async (req, res) => {
   const {
     paymentIntentId, cart_items, shipping_address, confirmation_email,
-    subtotal, discount_amount, coupon_code, total_price
+    subtotal, discount_amount, shipping_cost, coupon_code, total_price
   } = req.body;
 
   if (!paymentIntentId) { res.status(400); throw new Error('paymentIntentId is required'); }
@@ -133,6 +170,7 @@ export const completeOrder = asyncHandler(async (req, res) => {
     payment_intent_id: paymentIntentId,
     subtotal,
     discount_amount,
+    shipping_cost,
     coupon_code,
     total_price
   });
@@ -157,7 +195,7 @@ export const completeDemoOrder = asyncHandler(async (req, res) => {
 
   const {
     cart_items, shipping_address, confirmation_email,
-    subtotal, discount_amount, coupon_code, total_price
+    subtotal, discount_amount, shipping_cost, coupon_code, total_price
   } = req.body;
 
   if (!confirmation_email) { res.status(400); throw new Error('Confirmation email is required'); }
@@ -176,6 +214,7 @@ export const completeDemoOrder = asyncHandler(async (req, res) => {
     payment_intent_id: `demo_${guestSuffix}`,
     subtotal,
     discount_amount,
+    shipping_cost,
     coupon_code,
     total_price
   });

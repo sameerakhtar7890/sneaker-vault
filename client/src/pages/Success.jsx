@@ -46,6 +46,7 @@ export default function Success() {
       confirmation_email: pending.confirmation_email,
       subtotal: pending.subtotal,
       discount_amount: pending.discount_amount,
+      shipping_cost: pending.shipping_cost,
       coupon_code: pending.coupon_code,
       total_price: pending.total_price
     })
