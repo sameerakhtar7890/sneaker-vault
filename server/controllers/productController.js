@@ -172,3 +172,138 @@ export const deleteReview = asyncHandler(async (req, res) => {
 
   res.json({ message: 'Review deleted' });
 });
+
+function parseCSV(text) {
+  const lines = [];
+  let row = [""];
+  let inQuotes = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    const next = text[i+1];
+    if (c === '"') {
+      if (inQuotes && next === '"') {
+        row[row.length - 1] += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (c === ',' && !inQuotes) {
+      row.push('');
+    } else if ((c === '\r' || c === '\n') && !inQuotes) {
+      if (c === '\r' && next === '\n') {
+        i++;
+      }
+      lines.push(row);
+      row = [''];
+    } else {
+      row[row.length - 1] += c;
+    }
+  }
+  if (row.length > 1 || row[0] !== '') {
+    lines.push(row);
+  }
+  return lines;
+}
+
+export const importBulkCSV = asyncHandler(async (req, res) => {
+  if (!req.file) {
+    res.status(400);
+    throw new Error('Please upload a CSV file');
+  }
+
+  const csvContent = req.file.buffer.toString('utf8');
+  const rows = parseCSV(csvContent).map(r => r.map(cell => cell.trim()));
+
+  if (rows.length < 2) {
+    res.status(400);
+    throw new Error('CSV file is empty or only contains header');
+  }
+
+  const headers = rows[0].map(h => h.toLowerCase());
+  const productRows = rows.slice(1);
+
+  const productsToInsert = [];
+  const errors = [];
+
+  for (let i = 0; i < productRows.length; i++) {
+    const row = productRows[i];
+    if (row.length === 0 || (row.length === 1 && row[0] === '')) {
+      continue;
+    }
+
+    const rowNum = i + 2;
+    const item = {};
+
+    headers.forEach((header, colIndex) => {
+      const val = row[colIndex];
+      if (val !== undefined) {
+        item[header] = val;
+      }
+    });
+
+    if (!item.name) {
+      errors.push(`Row ${rowNum}: Name is required`);
+      continue;
+    }
+    if (!item.brand) {
+      errors.push(`Row ${rowNum}: Brand is required`);
+      continue;
+    }
+    if (!item.price || isNaN(Number(item.price))) {
+      errors.push(`Row ${rowNum}: Valid price is required`);
+      continue;
+    }
+
+    const price = Number(item.price);
+    const stock = item.stock ? Number(item.stock) : 0;
+    const featured = item.featured === 'true' || item.featured === '1' || item.featured === 'yes';
+
+    let sizes = [];
+    if (item.sizes) {
+      sizes = item.sizes.split(',').map(s => Number(s.trim())).filter(s => !isNaN(s));
+    }
+
+    let images = [];
+    if (item.images) {
+      images = item.images.split(',').map(img => img.trim()).filter(Boolean);
+    } else {
+      images = ['https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&q=80'];
+    }
+
+    productsToInsert.push({
+      name: item.name,
+      brand: item.brand,
+      price,
+      description: item.description || '',
+      images,
+      sizes,
+      stock,
+      category: item.category || 'sneakers',
+      featured,
+      seoTitle: item.seotitle || undefined,
+      seoDescription: item.seodescription || undefined,
+      ogImage: item.ogimage || undefined
+    });
+  }
+
+  if (errors.length > 0) {
+    res.status(400).json({
+      message: 'Validation failed for some rows',
+      errors
+    });
+    return;
+  }
+
+  if (productsToInsert.length === 0) {
+    res.status(400);
+    throw new Error('No valid products found to import');
+  }
+
+  const inserted = await Product.insertMany(productsToInsert);
+
+  res.status(201).json({
+    message: `Successfully imported ${inserted.length} products`,
+    count: inserted.length
+  });
+});

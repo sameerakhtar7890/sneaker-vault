@@ -16,6 +16,8 @@ import SeoMeta from '../components/SeoMeta';
 import { useSeo } from '../context/SeoContext';
 import { productSeoFromProduct } from '../utils/seo';
 
+import SneakerLoader from '../components/SneakerLoader';
+
 function Rating({ value, text }) {
   return (
     <div className="flex items-center gap-2">
@@ -119,7 +121,7 @@ export default function Detail() {
 
   if (loading) return (
     <div className="flex justify-center py-32">
-      <div className="w-8 h-8 rounded-full border-2 border-gold border-t-transparent animate-spin" />
+      <SneakerLoader size={64} />
     </div>
   );
 

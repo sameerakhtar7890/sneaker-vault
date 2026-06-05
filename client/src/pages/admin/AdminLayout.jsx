@@ -1,6 +1,6 @@
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LayoutDashboard, Package, ShoppingBag, LogOut, Tag, Ruler, RotateCcw, Mail, Globe, Truck, MessageSquare } from 'lucide-react';
+import { LayoutDashboard, Package, ShoppingBag, LogOut, Tag, Ruler, RotateCcw, Mail, Globe, Truck, MessageSquare, Image, Sliders } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import SeoMeta from '../../components/SeoMeta';
 
@@ -13,8 +13,10 @@ const links = [
   { to: '/admin/coupons', label: 'Coupons', icon: Tag },
   { to: '/admin/size-guides', label: 'Size Guides', icon: Ruler },
   { to: '/admin/newsletter', label: 'Newsletter', icon: Mail },
+  { to: '/admin/email-templates', label: 'Email Templates', icon: Sliders },
   { to: '/admin/seo', label: 'SEO', icon: Globe },
   { to: '/admin/shipping-zones', label: 'Shipping', icon: Truck },
+  { to: '/admin/hero', label: 'Hero CMS', icon: Image },
 ];
 
 export default function AdminLayout() {

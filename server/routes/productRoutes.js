@@ -1,13 +1,17 @@
 import { Router } from 'express';
+import multer from 'multer';
 import {
   listProducts, getProduct, createProduct, updateProduct, deleteProduct, addReview,
-  getPendingReviews, approveReview, deleteReview
+  getPendingReviews, approveReview, deleteReview, importBulkCSV
 } from '../controllers/productController.js';
 import { protect, admin } from '../middleware/authMiddleware.js';
 
 const r = Router();
+const uploadMemory = multer({ storage: multer.memoryStorage() });
+
 r.get('/', listProducts);
 r.get('/reviews/pending', protect, admin, getPendingReviews);
+r.post('/bulk-csv', protect, admin, uploadMemory.single('file'), importBulkCSV);
 r.get('/:slug', getProduct);
 r.post('/:id/reviews', protect, addReview);
 r.put('/:productId/reviews/:reviewId/approve', protect, admin, approveReview);

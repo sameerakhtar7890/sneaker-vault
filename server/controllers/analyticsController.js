@@ -58,7 +58,9 @@ export const getOverview = asyncHandler(async (_req, res) => {
     users,
     statusBreakdown,
     paymentBreakdown,
-    topProducts
+    topProducts,
+    lowStockCount,
+    lowStockProducts
   ] = await Promise.all([
     Order.countDocuments(),
     Order.countDocuments({ payment_status: 'paid' }),
@@ -90,7 +92,9 @@ export const getOverview = asyncHandler(async (_req, res) => {
       },
       { $sort: { revenue: -1 } },
       { $limit: 5 }
-    ])
+    ]),
+    Product.countDocuments({ stock: { $lte: 5 } }),
+    Product.find({ stock: { $lte: 5 } }).sort({ stock: 1 }).lean()
   ]);
 
   const recentOrders = await Order.find({})
@@ -106,7 +110,8 @@ export const getOverview = asyncHandler(async (_req, res) => {
       orders: totalOrders,
       paidOrders,
       products,
-      users
+      users,
+      lowStockCount
     },
     statusBreakdown: statusBreakdown.map(s => ({ status: s._id, count: s.count })),
     paymentBreakdown: paymentBreakdown.map(p => ({ status: p._id, count: p.count })),
@@ -115,7 +120,8 @@ export const getOverview = asyncHandler(async (_req, res) => {
       units: p.units,
       revenue: Math.round(p.revenue * 100) / 100
     })),
-    recentOrders
+    recentOrders,
+    lowStockProducts
   });
 });
 
