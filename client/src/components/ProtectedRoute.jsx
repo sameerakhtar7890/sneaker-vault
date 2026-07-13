@@ -1,5 +1,6 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import SneakerLoader from './SneakerLoader.jsx';
 
 /* Redirects unauthenticated users to /login, preserving the intended page */
 export default function ProtectedRoute({ children, adminOnly = false }) {
@@ -10,7 +11,7 @@ export default function ProtectedRoute({ children, adminOnly = false }) {
   if (token && !user) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
-        <div className="w-8 h-8 rounded-full border-2 border-gold border-t-transparent animate-spin" />
+        <SneakerLoader size={60} />
       </div>
     );
   }

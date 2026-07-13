@@ -16,6 +16,10 @@ import Checkout from '../pages/Checkout.jsx';
 import Success from '../pages/Success.jsx';
 import Login from '../pages/Login.jsx';
 import Register from '../pages/Register.jsx';
+import ForgotPassword from '../pages/ForgotPassword.jsx';
+import ResetPassword from '../pages/ResetPassword.jsx';
+import TrackOrder from '../pages/TrackOrder.jsx';
+import NotFound from '../pages/NotFound.jsx';
 import About from '../pages/About.jsx';
 import Contact from '../pages/Contact.jsx';
 import Profile from '../pages/Profile.jsx';
@@ -53,6 +57,9 @@ export default function PublicLayout() {
               <Route path="/terms" element={<Terms />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/track-order" element={<TrackOrder />} />
               <Route path="/wishlist" element={<Wishlist />} />
               <Route path="/compare" element={<Compare />} />
               <Route path="/profile" element={
@@ -64,6 +71,7 @@ export default function PublicLayout() {
               <Route path="/order/:id" element={<OrderTracking />} />
               <Route path="/success" element={<Success />} />
               <Route path="/newsletter/unsubscribe" element={<NewsletterUnsubscribe />} />
+              <Route path="*" element={<NotFound />} />
             </Routes>
           </PageTransition>
         </AnimatePresence>

@@ -5,6 +5,8 @@ import { GitCompare, X, Star, Trash2, ShoppingBag } from 'lucide-react';
 import { useCompare, MAX_COMPARE } from '../context/CompareContext';
 import { useCart } from '../context/CartContext';
 
+import SneakerLoader from '../components/SneakerLoader';
+
 function Stars({ value }) {
   return (
     <div className="flex text-gold justify-center">
@@ -108,7 +110,7 @@ export default function Compare() {
   if (loading) {
     return (
       <div className="flex justify-center py-32">
-        <div className="w-8 h-8 rounded-full border-2 border-gold border-t-transparent animate-spin" />
+        <SneakerLoader size={64} />
       </div>
     );
   }

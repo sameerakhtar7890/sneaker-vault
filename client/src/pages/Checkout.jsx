@@ -7,6 +7,7 @@ import CheckoutForm from '../components/CheckoutForm';
 import DemoCheckoutForm from '../components/DemoCheckoutForm';
 import { useCart } from '../context/CartContext';
 import { useToast } from '../context/ToastContext';
+import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY || 'pk_test_placeholder');
@@ -14,6 +15,7 @@ const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY || 'pk_t
 export default function Checkout() {
   const { items, total } = useCart();
   const { addToast } = useToast();
+  const { user } = useAuth();
 
   const [clientSecret, setClientSecret] = useState(null);
   const [paymentIntentId, setPaymentIntentId] = useState(null);
@@ -25,9 +27,21 @@ export default function Checkout() {
   const [couponError, setCouponError] = useState('');
   const [validating, setValidating] = useState(false);
 
+  // Lifted state
+  const [shipping, setShipping] = useState({
+    fullName: user?.name || '',
+    address: '',
+    city: '',
+    postalCode: '',
+    country: 'US'
+  });
+  const [confirmationEmail, setConfirmationEmail] = useState(user?.email || '');
+  const [selectedAddressId, setSelectedAddressId] = useState(null);
+
   const [pricing, setPricing] = useState({
     subtotal: total,
     discountAmount: 0,
+    shippingCost: 0,
     total: total
   });
 
@@ -36,20 +50,44 @@ export default function Checkout() {
     [items]
   );
 
-  const fetchPaymentIntent = useCallback(async (couponCode = appliedCoupon?.code) => {
+  // Load default address if available
+  useEffect(() => {
+    if (!user) return;
+    api.get('/addresses')
+      .then(r => {
+        const list = r.data || [];
+        const def = list.find(a => a.isDefault) || list[0];
+        if (def) {
+          setSelectedAddressId(def._id);
+          setShipping({
+            fullName: def.fullName,
+            address: def.address,
+            city: def.city,
+            postalCode: def.postalCode,
+            country: def.country || 'US'
+          });
+        }
+      })
+      .catch(() => {});
+  }, [user?._id]);
+
+  const fetchPaymentIntent = useCallback(async (couponCode = appliedCoupon?.code, currentShipping = shipping) => {
     if (!items.length) return;
     setLoading(true);
     try {
       const { data } = await api.post('/checkout/create-payment-intent', {
         items: cartPayload(),
         currency: 'usd',
-        couponCode: couponCode || undefined
+        couponCode: couponCode || undefined,
+        shippingAddress: currentShipping,
+        paymentIntentId: paymentIntentId || undefined
       });
       setClientSecret(data.clientSecret);
       setPaymentIntentId(data.paymentIntentId);
       setPricing({
         subtotal: data.subtotal,
         discountAmount: data.discountAmount,
+        shippingCost: data.shippingCost || 0,
         total: data.total
       });
       setDemo(false);
@@ -57,23 +95,38 @@ export default function Checkout() {
       setClientSecret(null);
       setPaymentIntentId(null);
       setDemo(true);
-      if (appliedCoupon) {
+      
+      // In demo mode, calculate shipping rate from backend
+      try {
+        const calcRes = await api.post('/shipping-zones/calculate', {
+          country: currentShipping?.country || 'US',
+          subtotal: total
+        });
+        const shipCost = calcRes.data.shippingCost;
+        const disc = appliedCoupon ? appliedCoupon.discountAmount : 0;
         setPricing({
           subtotal: total,
-          discountAmount: appliedCoupon.discountAmount,
-          total: Math.max(0, total - appliedCoupon.discountAmount)
+          discountAmount: disc,
+          shippingCost: shipCost,
+          total: Math.max(0, total - disc + shipCost)
         });
-      } else {
-        setPricing({ subtotal: total, discountAmount: 0, total });
+      } catch {
+        const disc = appliedCoupon ? appliedCoupon.discountAmount : 0;
+        setPricing({
+          subtotal: total,
+          discountAmount: disc,
+          shippingCost: 0,
+          total: Math.max(0, total - disc)
+        });
       }
     } finally {
       setLoading(false);
     }
-  }, [items, cartPayload, appliedCoupon, total]);
+  }, [items, cartPayload, appliedCoupon, total, paymentIntentId]);
 
   useEffect(() => {
-    fetchPaymentIntent(appliedCoupon?.code);
-  }, [items, appliedCoupon?.code]); // eslint-disable-line react-hooks/exhaustive-deps
+    fetchPaymentIntent(appliedCoupon?.code, shipping);
+  }, [items, appliedCoupon?.code, shipping.country]); // Re-fetch on items, coupon, or country changes
 
   const applyPromo = async () => {
     const code = promoInput.trim();
@@ -91,13 +144,22 @@ export default function Checkout() {
         discountAmount: data.discountAmount
       });
       setPromoInput('');
+      
+      // Calculate shipping for the update
+      const calcRes = await api.post('/shipping-zones/calculate', {
+        country: shipping.country || 'US',
+        subtotal: data.subtotal
+      }).catch(() => ({ data: { shippingCost: 0 } }));
+      const shipCost = calcRes.data.shippingCost;
+
       setPricing({
         subtotal: data.subtotal,
         discountAmount: data.discountAmount,
-        total: data.total
+        shippingCost: shipCost,
+        total: Math.max(0, data.total + shipCost)
       });
       addToast(`Promo code "${data.coupon.code}" applied!`);
-      await fetchPaymentIntent(data.coupon.code);
+      await fetchPaymentIntent(data.coupon.code, shipping);
     } catch (err) {
       setCouponError(err?.response?.data?.message || 'Invalid promo code');
     } finally {
@@ -110,7 +172,7 @@ export default function Checkout() {
     setPromoInput('');
     setCouponError('');
     addToast('Promo code removed');
-    await fetchPaymentIntent(null);
+    await fetchPaymentIntent(null, shipping);
   };
 
   if (!items.length) {
@@ -120,6 +182,7 @@ export default function Checkout() {
   const pricingPayload = {
     subtotal: pricing.subtotal,
     discountAmount: pricing.discountAmount,
+    shippingCost: pricing.shippingCost,
     total: pricing.total,
     couponCode: appliedCoupon?.code || null
   };
@@ -146,10 +209,25 @@ export default function Checkout() {
               pricing={pricingPayload}
               paymentIntentId={paymentIntentId}
               items={items}
+              shipping={shipping}
+              onShippingChange={setShipping}
+              confirmationEmail={confirmationEmail}
+              onEmailChange={setConfirmationEmail}
+              selectedAddressId={selectedAddressId}
+              onSelectAddress={setSelectedAddressId}
             />
           </Elements>
         ) : demo ? (
-          <DemoCheckoutForm items={items} pricing={pricingPayload} />
+          <DemoCheckoutForm
+            items={items}
+            pricing={pricingPayload}
+            shipping={shipping}
+            onShippingChange={setShipping}
+            confirmationEmail={confirmationEmail}
+            onEmailChange={setConfirmationEmail}
+            selectedAddressId={selectedAddressId}
+            onSelectAddress={setSelectedAddressId}
+          />
         ) : null}
       </section>
 
@@ -214,6 +292,10 @@ export default function Checkout() {
               <span>-${pricing.discountAmount.toFixed(2)}</span>
             </div>
           )}
+          <div className="flex justify-between text-zinc-400">
+            <span>Shipping</span>
+            <span>{pricing.shippingCost > 0 ? `$${pricing.shippingCost.toFixed(2)}` : 'Free'}</span>
+          </div>
           <div className="flex justify-between pt-2 border-t border-white/10">
             <span className="text-zinc-400">Total</span>
             <span className="font-display text-2xl text-gold">${pricing.total.toFixed(2)}</span>

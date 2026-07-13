@@ -16,6 +16,8 @@ import SeoMeta from '../components/SeoMeta';
 import { useSeo } from '../context/SeoContext';
 import { productSeoFromProduct } from '../utils/seo';
 
+import SneakerLoader from '../components/SneakerLoader';
+
 function Rating({ value, text }) {
   return (
     <div className="flex items-center gap-2">
@@ -119,13 +121,14 @@ export default function Detail() {
 
   if (loading) return (
     <div className="flex justify-center py-32">
-      <div className="w-8 h-8 rounded-full border-2 border-gold border-t-transparent animate-spin" />
+      <SneakerLoader size={64} />
     </div>
   );
 
   if (!product) return <div className="p-20 text-center text-zinc-500">Product not found.</div>;
 
-  const alreadyReviewed = user && product.reviews?.some(r => r.user === user._id);
+  const myReview = user && product.reviews?.find(r => r.user === user._id);
+  const alreadyReviewed = !!myReview;
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-12">
@@ -230,11 +233,11 @@ export default function Detail() {
         <div>
           <h2 className="font-display text-3xl mb-8">Customer Reviews</h2>
           
-          {product.reviews?.length === 0 ? (
+          {!product.reviews?.filter(r => r.approved).length ? (
             <p className="text-zinc-500">No reviews yet. Be the first to review this pair!</p>
           ) : (
             <div className="space-y-6">
-              {product.reviews?.map(r => (
+              {product.reviews?.filter(r => r.approved).map(r => (
                 <div key={r._id} className="glass rounded-2xl p-6">
                   <div className="flex justify-between items-start mb-4">
                     <div>
@@ -264,7 +267,11 @@ export default function Detail() {
             </div>
           ) : alreadyReviewed ? (
             <div className="glass rounded-2xl p-6 border-l-4 border-l-gold">
-              <p className="text-zinc-300">You have already reviewed this product. Thank you for your feedback!</p>
+              <p className="text-zinc-300">
+                {myReview.approved 
+                  ? "You have already reviewed this product. Thank you for your feedback!" 
+                  : "Your review has been submitted and is currently pending administrator approval."}
+              </p>
             </div>
           ) : (
             <form onSubmit={submitReview} className="glass rounded-2xl p-8">

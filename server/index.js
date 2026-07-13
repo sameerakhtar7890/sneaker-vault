@@ -19,6 +19,11 @@ import pwaRoutes from './routes/pwaRoutes.js';
 import newsletterRoutes from './routes/newsletterRoutes.js';
 import seoRoutes from './routes/seoRoutes.js';
 import uploadRoutes from './routes/uploadRoutes.js';
+import contactRoutes from './routes/contactRoutes.js';
+import shippingZoneRoutes from './routes/shippingZoneRoutes.js';
+import stockAlertRoutes from './routes/stockAlertRoutes.js';
+import heroRoutes from './routes/heroRoutes.js';
+import emailTemplateRoutes from './routes/emailTemplateRoutes.js';
 import { stripeWebhook } from './controllers/paymentController.js';
 import { errorHandler, notFound } from './middleware/errorMiddleware.js';
 
@@ -51,6 +56,11 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/addresses', addressRoutes);
 app.use('/api/compare', compareRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/contact', contactRoutes);
+app.use('/api/shipping-zones', shippingZoneRoutes);
+app.use('/api/stock-alerts', stockAlertRoutes);
+app.use('/api/hero', heroRoutes);
+app.use('/api/email-templates', emailTemplateRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

@@ -57,6 +57,48 @@ const sizeGuideSchema = new mongoose.Schema({
 
 const SizeGuide = mongoose.model('SizeGuide', sizeGuideSchema);
 
+const shippingZoneSchema = new mongoose.Schema({
+  name: { type: String, unique: true },
+  countries: [String],
+  rateType: { type: String, enum: ['fixed', 'free', 'conditional_free'] },
+  baseCost: { type: Number, default: 0 },
+  freeShippingThreshold: { type: Number, default: 0 },
+  isDefault: { type: Boolean, default: false },
+  isActive: { type: Boolean, default: true }
+}, { timestamps: true });
+
+const ShippingZone = mongoose.model('ShippingZone', shippingZoneSchema);
+
+const sampleShippingZones = [
+  {
+    name: 'Domestic (US)',
+    countries: ['US', 'United States'],
+    rateType: 'conditional_free',
+    baseCost: 5,
+    freeShippingThreshold: 100,
+    isDefault: false,
+    isActive: true
+  },
+  {
+    name: 'North America & Europe',
+    countries: ['CA', 'Canada', 'GB', 'United Kingdom', 'DE', 'Germany', 'FR', 'France'],
+    rateType: 'conditional_free',
+    baseCost: 15,
+    freeShippingThreshold: 150,
+    isDefault: false,
+    isActive: true
+  },
+  {
+    name: 'Rest of the World',
+    countries: [],
+    rateType: 'fixed',
+    baseCost: 30,
+    freeShippingThreshold: 0,
+    isDefault: true,
+    isActive: true
+  }
+];
+
 const orderItemSchema = new mongoose.Schema({
   product: mongoose.Schema.Types.ObjectId,
   name: String, image: String, size: Number, qty: Number, price: Number
@@ -594,6 +636,11 @@ async function seed() {
   await SizeGuide.deleteMany({});
   await SizeGuide.insertMany(sampleSizeGuides);
   console.log(`📏  Seeded ${sampleSizeGuides.length} size guides`);
+
+  /* seed shipping zones */
+  await ShippingZone.deleteMany({});
+  await ShippingZone.insertMany(sampleShippingZones);
+  console.log(`🚚  Seeded ${sampleShippingZones.length} shipping zones`);
 
   await mongoose.disconnect();
   console.log('🏁  Done!');

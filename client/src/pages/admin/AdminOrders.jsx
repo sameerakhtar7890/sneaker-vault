@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Check } from 'lucide-react';
+import { Check, Download, Filter, X } from 'lucide-react';
 import api from '../../utils/api';
 
 const ORDER_STATUSES   = ['created', 'processing', 'shipped', 'delivered', 'cancelled'];
@@ -20,10 +20,19 @@ const payColor = s => s === 'paid'
     ? 'text-red-400 bg-red-400/10'
     : 'text-zinc-400 bg-zinc-400/10';
 
+const inp = 'bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-gold/50 transition text-zinc-200';
+
 export default function AdminOrders() {
-  const [orders,  setOrders]  = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [toast,   setToast]   = useState('');
+  const [orders,      setOrders]      = useState([]);
+  const [loading,     setLoading]     = useState(true);
+  const [toast,       setToast]       = useState('');
+  const [exporting,   setExporting]   = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+
+  // Export filter state
+  const [exportFilters, setExportFilters] = useState({
+    from: '', to: '', status: '', payment_status: ''
+  });
 
   const load = () =>
     api.get('/orders/admin/all')
@@ -39,6 +48,40 @@ export default function AdminOrders() {
     setOrders(prev => prev.map(o => o._id === id ? { ...o, [field]: value } : o));
     showToast('Order updated!');
   };
+
+  const handleExportCSV = async () => {
+    setExporting(true);
+    try {
+      const params = new URLSearchParams();
+      if (exportFilters.from)           params.set('from',           exportFilters.from);
+      if (exportFilters.to)             params.set('to',             exportFilters.to);
+      if (exportFilters.status)         params.set('status',         exportFilters.status);
+      if (exportFilters.payment_status) params.set('payment_status', exportFilters.payment_status);
+
+      const qs = params.toString();
+      const url = `/orders/admin/export${qs ? `?${qs}` : ''}`;
+
+      const res = await api.get(url, { responseType: 'blob' });
+      const blob = new Blob([res.data], { type: 'text/csv;charset=utf-8;' });
+      const href = URL.createObjectURL(blob);
+      const today = new Date().toISOString().slice(0, 10);
+      const a = document.createElement('a');
+      a.href = href;
+      a.download = `sneaker-vault-orders-${today}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(href);
+      showToast('CSV downloaded!');
+    } catch (err) {
+      showToast('Export failed — please try again');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const clearFilters = () => setExportFilters({ from: '', to: '', status: '', payment_status: '' });
+  const hasFilters = Object.values(exportFilters).some(Boolean);
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
@@ -59,11 +102,120 @@ export default function AdminOrders() {
         )}
       </AnimatePresence>
 
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="font-display text-3xl">Orders</h1>
-        <span className="text-sm text-zinc-400">{orders.length} total orders</span>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="font-display text-3xl">Orders</h1>
+          <p className="text-sm text-zinc-400 mt-1">{orders.length} total orders</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowFilters(f => !f)}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border transition
+              ${showFilters
+                ? 'bg-gold/15 text-gold border-gold/30'
+                : 'bg-white/5 text-zinc-300 border-white/10 hover:border-gold/30 hover:text-gold'
+              }`}
+          >
+            <Filter size={15} />
+            Filter Export
+            {hasFilters && (
+              <span className="bg-gold text-ink-950 text-[10px] px-1.5 py-0.5 rounded-full font-bold leading-none ml-1">
+                {Object.values(exportFilters).filter(Boolean).length}
+              </span>
+            )}
+          </button>
+
+          <motion.button
+            whileTap={{ scale: 0.96 }}
+            onClick={handleExportCSV}
+            disabled={exporting}
+            className="btn-gold flex items-center gap-2 disabled:opacity-60"
+          >
+            {exporting ? (
+              <>
+                <div className="w-4 h-4 rounded-full border-2 border-ink-950/40 border-t-ink-950 animate-spin" />
+                Exporting…
+              </>
+            ) : (
+              <>
+                <Download size={15} />
+                Export CSV
+              </>
+            )}
+          </motion.button>
+        </div>
       </div>
 
+      {/* Export Filters Panel */}
+      <AnimatePresence>
+        {showFilters && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden mb-6"
+          >
+            <div className="glass rounded-2xl p-5">
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-sm font-medium text-zinc-300 tracking-wide uppercase text-[11px] tracking-widest">Export Filters</p>
+                {hasFilters && (
+                  <button onClick={clearFilters} className="flex items-center gap-1 text-xs text-zinc-500 hover:text-red-400 transition">
+                    <X size={12} /> Clear all
+                  </button>
+                )}
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-[10px] text-zinc-500 uppercase tracking-wider mb-1.5">From Date</label>
+                  <input
+                    type="date"
+                    value={exportFilters.from}
+                    onChange={e => setExportFilters(f => ({ ...f, from: e.target.value }))}
+                    className={inp}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] text-zinc-500 uppercase tracking-wider mb-1.5">To Date</label>
+                  <input
+                    type="date"
+                    value={exportFilters.to}
+                    onChange={e => setExportFilters(f => ({ ...f, to: e.target.value }))}
+                    className={inp}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] text-zinc-500 uppercase tracking-wider mb-1.5">Order Status</label>
+                  <select
+                    value={exportFilters.status}
+                    onChange={e => setExportFilters(f => ({ ...f, status: e.target.value }))}
+                    className={`${inp} cursor-pointer`}
+                  >
+                    <option value="">All statuses</option>
+                    {ORDER_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] text-zinc-500 uppercase tracking-wider mb-1.5">Payment Status</label>
+                  <select
+                    value={exportFilters.payment_status}
+                    onChange={e => setExportFilters(f => ({ ...f, payment_status: e.target.value }))}
+                    className={`${inp} cursor-pointer`}
+                  >
+                    <option value="">All payments</option>
+                    {PAYMENT_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+              </div>
+              <p className="text-[11px] text-zinc-600 mt-3">
+                Filters apply only to the exported CSV, not to the table below.
+              </p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Orders Table */}
       <div className="glass rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">

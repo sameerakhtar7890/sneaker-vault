@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { HeartCrack } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
+import StockAlertForm from '../components/StockAlertForm';
 import { useCart } from '../context/CartContext';
 import api from '../utils/api';
 
@@ -61,7 +62,10 @@ export default function Wishlist() {
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {products.map((p, i) => (
-            <ProductCard key={p._id} p={p} index={i} />
+            <div key={p._id} className="flex flex-col">
+              <ProductCard p={p} index={i} />
+              {p.stock === 0 && <StockAlertForm productId={p._id} />}
+            </div>
           ))}
         </div>
       )}

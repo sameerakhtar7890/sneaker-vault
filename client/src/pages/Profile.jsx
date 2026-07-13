@@ -28,6 +28,7 @@ export default function Profile() {
   
   const [form, setForm] = useState({
     name: user?.name || '',
+    currentPassword: '',
     password: '',
     confirm: '',
     emailNotifications: user?.emailNotifications !== false
@@ -65,21 +66,28 @@ export default function Profile() {
   const updateProfile = async e => {
     e.preventDefault();
     setError('');
-    if (form.password && form.password !== form.confirm) {
-      setError('Passwords do not match');
-      return;
+    if (form.password) {
+      if (!form.currentPassword) {
+        setError('Please enter your current password');
+        return;
+      }
+      if (form.password !== form.confirm) {
+        setError('Passwords do not match');
+        return;
+      }
     }
     setSaving(true);
     try {
       const payload = { name: form.name, emailNotifications: form.emailNotifications };
-      if (form.password) payload.password = form.password;
+      if (form.password) {
+        payload.password = form.password;
+        payload.currentPassword = form.currentPassword;
+      }
       
       const res = await api.put('/auth/profile', payload);
-      // The context automatically updates based on localStorage token changes if needed, 
-      // but we can just show success here.
       localStorage.setItem('sv_token', res.data.token);
       showToast('Profile updated successfully');
-      setForm(f => ({ ...f, password: '', confirm: '' }));
+      setForm(f => ({ ...f, password: '', confirm: '', currentPassword: '' }));
     } catch (err) {
       setError(err?.response?.data?.message || 'Failed to update profile');
     } finally {
@@ -194,6 +202,14 @@ export default function Profile() {
             <div className="pt-4 border-t border-white/5">
               <h3 className="text-sm font-medium text-zinc-200 mb-4">Change Password</h3>
               <div className="space-y-4">
+                <div>
+                  <label className="block text-xs text-zinc-400 tracking-widest uppercase mb-2">Current Password</label>
+                  <div className="relative">
+                    <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" />
+                    <input type="password" name="currentPassword" value={form.currentPassword} onChange={handle} placeholder="Required to change password"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl pl-11 pr-4 py-3 text-sm focus:outline-none focus:border-gold/50 transition placeholder-zinc-600" />
+                  </div>
+                </div>
                 <div>
                   <label className="block text-xs text-zinc-400 tracking-widest uppercase mb-2">New Password</label>
                   <div className="relative">

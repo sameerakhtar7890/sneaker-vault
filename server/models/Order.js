@@ -21,8 +21,9 @@ const orderSchema = new mongoose.Schema({
   subtotal:          { type: Number, min: 0 },
   discount_amount:   { type: Number, default: 0, min: 0 },
   coupon_code:       { type: String, default: null },
+  shipping_cost:     { type: Number, default: 0, min: 0 },
   total_price:       { type: Number, required: true, min: 0 },
-  payment_status:    { type: String, enum: ['pending','paid','failed'], default: 'pending', index: true },
+  payment_status:    { type: String, enum: ['pending','paid','failed','refunded'], default: 'pending', index: true },
   payment_intent_id: { type: String, index: true },
   status:            { type: String, enum: ['created','processing','shipped','delivered','cancelled'], default: 'created', index: true }
 }, { timestamps: true });

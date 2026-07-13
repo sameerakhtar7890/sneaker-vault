@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { motion } from 'framer-motion';
-import { CheckCircle2, Clock, Truck, Package, ArrowLeft, RotateCcw } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { CheckCircle2, Clock, Truck, Package, ArrowLeft, RotateCcw, XCircle, AlertTriangle } from 'lucide-react';
 import api from '../utils/api';
+import { useToast } from '../context/ToastContext';
 import ReturnRequestModal, { RETURN_STATUS_STYLE, REASON_LABELS } from '../components/ReturnRequestModal';
 
 const STATUS_STEPS = ['created', 'processing', 'shipped', 'delivered'];
@@ -19,6 +20,9 @@ export default function OrderTracking() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
+  const [cancelConfirm, setCancelConfirm] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const { addToast } = useToast();
 
   const load = () => {
     setLoading(true);
@@ -42,6 +46,26 @@ export default function OrderTracking() {
 
   useEffect(() => { load(); }, [id, trackEmail, user]);
 
+  const handleCancelOrder = async () => {
+    setCancelling(true);
+    try {
+      const params = trackEmail ? { params: { email: trackEmail } } : {};
+      const { data } = await api.post(`/orders/${id}/cancel`, {}, params);
+      setOrder(data.order);
+      setCancelConfirm(false);
+      addToast(
+        data.refundIssued
+          ? 'Order cancelled. A refund has been initiated to your original payment method.'
+          : 'Order cancelled successfully.',
+        'success'
+      );
+    } catch (err) {
+      addToast(err?.response?.data?.message || 'Failed to cancel order.', 'error');
+    } finally {
+      setCancelling(false);
+    }
+  };
+
   if (loading) return (
     <div className="flex justify-center py-32">
       <div className="w-8 h-8 rounded-full border-2 border-gold border-t-transparent animate-spin" />
@@ -60,6 +84,15 @@ export default function OrderTracking() {
 
   const currentStepIndex = STATUS_STEPS.indexOf(order.status) !== -1 ? STATUS_STEPS.indexOf(order.status) : 0;
   const isCancelled = order.status === 'cancelled';
+  const isRefunded  = order.payment_status === 'refunded';
+
+  // Can cancel: only 'created' status, and user has authorization
+  const canCancelOrder = order.status === 'created' && (
+    (user && !order.is_guest && order.user_id && order.user_id._id?.toString() === user._id?.toString()) ||
+    (order.is_guest && trackEmail && trackEmail === order.confirmation_email) ||
+    (user && order.user_id && order.user_id === user._id)
+  );
+
   const canRequestReturn = user
     && !order.is_guest
     && order.status === 'delivered'
@@ -79,12 +112,19 @@ export default function OrderTracking() {
             <h1 className="font-display text-4xl mb-1">#{order._id.substring(0, 8).toUpperCase()}</h1>
             <p className="text-zinc-400 text-sm">Placed on {new Date(order.createdAt).toLocaleDateString()}</p>
           </div>
-          <div className="text-left md:text-right">
-            <p className="text-zinc-500 text-xs uppercase tracking-wider mb-1">Payment Status</p>
-            <span className={`px-3 py-1 rounded-full text-xs font-semibold
-              ${order.payment_status === 'paid' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
-              {order.payment_status.toUpperCase()}
-            </span>
+          <div className="flex flex-wrap items-center gap-3 md:justify-end">
+            <div>
+              <p className="text-zinc-500 text-xs uppercase tracking-wider mb-1">Payment Status</p>
+              <span className={`px-3 py-1 rounded-full text-xs font-semibold
+                ${ isRefunded
+                    ? 'bg-zinc-500/10 text-zinc-400'
+                    : order.payment_status === 'paid'
+                      ? 'bg-green-500/10 text-green-400'
+                      : 'bg-red-500/10 text-red-400'
+                }`}>
+                {isRefunded ? 'REFUNDED' : order.payment_status.toUpperCase()}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -127,8 +167,12 @@ export default function OrderTracking() {
         {/* Timeline */}
         {isCancelled ? (
           <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-6 mb-12 text-center">
+            <XCircle size={32} className="mx-auto text-red-400 mb-3" />
             <h3 className="text-red-400 font-bold text-lg mb-2">Order Cancelled</h3>
-            <p className="text-red-400/80 text-sm">This order has been cancelled and will not be shipped.</p>
+            <p className="text-red-400/80 text-sm">
+              This order has been cancelled and will not be shipped.
+              {isRefunded && <span className="block mt-1 text-zinc-400">A refund has been initiated to your original payment method.</span>}
+            </p>
           </div>
         ) : (
           <div className="relative mb-16">
@@ -211,6 +255,12 @@ export default function OrderTracking() {
                     <span>-${order.discount_amount.toFixed(2)}</span>
                   </div>
                 )}
+                {order.shipping_cost != null && (
+                  <div className="flex justify-between text-zinc-400">
+                    <span>Shipping</span>
+                    <span>{order.shipping_cost > 0 ? `$${order.shipping_cost.toFixed(2)}` : 'Free'}</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-zinc-400">
                   <span>Total Amount</span>
                   <span className="text-zinc-100 font-semibold">${order.total_price.toFixed(2)}</span>
@@ -227,6 +277,16 @@ export default function OrderTracking() {
                 <RotateCcw size={16} /> Request Return
               </button>
             )}
+
+            {canCancelOrder && (
+              <button
+                onClick={() => setCancelConfirm(true)}
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-red-500/30
+                           text-red-400 hover:bg-red-500/10 transition text-sm font-medium"
+              >
+                <XCircle size={16} /> Cancel Order
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -237,6 +297,63 @@ export default function OrderTracking() {
         order={order}
         onSuccess={load}
       />
+
+      {/* Cancel Confirmation Modal */}
+      <AnimatePresence>
+        {cancelConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+            onClick={(e) => { if (e.target === e.currentTarget) setCancelConfirm(false); }}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.92, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.92, y: 16 }}
+              transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+              className="glass-strong rounded-2xl p-8 max-w-sm w-full shadow-card"
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-red-500/10 rounded-xl">
+                  <AlertTriangle size={22} className="text-red-400" />
+                </div>
+                <h2 className="font-display text-xl">Cancel Order?</h2>
+              </div>
+              <p className="text-zinc-400 text-sm mb-2 leading-relaxed">
+                Are you sure you want to cancel this order?
+              </p>
+              {order.payment_status === 'paid' && (
+                <p className="text-sm text-green-400 mb-6">
+                  💳 A full refund will be issued to your original payment method.
+                </p>
+              )}
+              {order.payment_status !== 'paid' && <div className="mb-6" />}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setCancelConfirm(false)}
+                  disabled={cancelling}
+                  className="flex-1 btn-ghost text-sm py-2.5 disabled:opacity-50"
+                >
+                  Keep Order
+                </button>
+                <button
+                  onClick={handleCancelOrder}
+                  disabled={cancelling}
+                  className="flex-1 py-2.5 rounded-full bg-red-500/80 hover:bg-red-500 text-white text-sm font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {cancelling ? (
+                    <><div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> Cancelling…</>
+                  ) : (
+                    <><XCircle size={15} /> Yes, Cancel</>
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

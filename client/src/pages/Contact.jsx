@@ -1,14 +1,32 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mail, MapPin, Phone, CheckCircle2 } from 'lucide-react';
+import api from '../utils/api';
+import { useToast } from '../context/ToastContext';
 
 export default function Contact() {
+  const { addToast } = useToast();
+  const [form, setForm] = useState({ name: '', email: '', subject: 'Order Inquiry', message: '' });
+  const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleInput = (e) => {
+    setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setSubmitted(true);
-    setTimeout(() => setSubmitted(false), 5000); // reset after 5s
+    setLoading(true);
+    try {
+      await api.post('/contact', form);
+      addToast('Message sent successfully!', 'success');
+      setSubmitted(true);
+    } catch (err) {
+      const msg = err?.response?.data?.message || 'Failed to send message. Please try again.';
+      addToast(msg, 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -77,17 +95,41 @@ export default function Contact() {
                 <div className="grid md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-xs text-zinc-400 uppercase tracking-wider mb-2">Name</label>
-                    <input required type="text" className="w-full bg-ink-900 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-gold/30" placeholder="John Doe" />
+                    <input 
+                      required 
+                      type="text" 
+                      name="name"
+                      value={form.name}
+                      onChange={handleInput}
+                      disabled={loading}
+                      className="w-full bg-ink-900 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-gold/30 disabled:opacity-50" 
+                      placeholder="John Doe" 
+                    />
                   </div>
                   <div>
                     <label className="block text-xs text-zinc-400 uppercase tracking-wider mb-2">Email</label>
-                    <input required type="email" className="w-full bg-ink-900 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-gold/30" placeholder="john@example.com" />
+                    <input 
+                      required 
+                      type="email" 
+                      name="email"
+                      value={form.email}
+                      onChange={handleInput}
+                      disabled={loading}
+                      className="w-full bg-ink-900 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-gold/30 disabled:opacity-50" 
+                      placeholder="john@example.com" 
+                    />
                   </div>
                 </div>
                 
                 <div>
                   <label className="block text-xs text-zinc-400 uppercase tracking-wider mb-2">Subject</label>
-                  <select className="w-full bg-ink-900 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-gold/30">
+                  <select 
+                    name="subject"
+                    value={form.subject}
+                    onChange={handleInput}
+                    disabled={loading}
+                    className="w-full bg-ink-900 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-gold/30 disabled:opacity-50"
+                  >
                     <option>Order Inquiry</option>
                     <option>Product Question</option>
                     <option>Returns & Exchanges</option>
@@ -97,11 +139,24 @@ export default function Contact() {
 
                 <div>
                   <label className="block text-xs text-zinc-400 uppercase tracking-wider mb-2">Message</label>
-                  <textarea required rows="6" className="w-full bg-ink-900 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-gold/30 resize-none" placeholder="How can we help you?"></textarea>
+                  <textarea 
+                    required 
+                    rows="6" 
+                    name="message"
+                    value={form.message}
+                    onChange={handleInput}
+                    disabled={loading}
+                    className="w-full bg-ink-900 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-gold/30 resize-none disabled:opacity-50" 
+                    placeholder="How can we help you?"
+                  ></textarea>
                 </div>
 
-                <button type="submit" className="btn-gold w-full py-4 text-sm font-semibold tracking-wide">
-                  Send Message
+                <button 
+                  type="submit" 
+                  disabled={loading}
+                  className="btn-gold w-full py-4 text-sm font-semibold tracking-wide disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {loading ? 'Sending Message...' : 'Send Message'}
                 </button>
               </motion.form>
             )}

@@ -1,5 +1,5 @@
 import { Link, NavLink, useNavigate } from 'react-router-dom';
-import { ShoppingBag, User, LogOut, LayoutDashboard, LogIn, Heart, GitCompare, Download } from 'lucide-react';
+import { ShoppingBag, User, LogOut, LayoutDashboard, LogIn, Heart, GitCompare, Download, Package } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useRef, useEffect } from 'react';
 import { useCart } from '../context/CartContext';
@@ -68,6 +68,9 @@ export default function Navbar() {
           <NavLink to="/" end className={link}>Home</NavLink>
           <NavLink to="/shop" className={link}>Shop</NavLink>
           <NavLink to="/shop?featured=true" className={link}>Featured</NavLink>
+          {!user && (
+            <NavLink to="/track-order" className={link}>Track Order</NavLink>
+          )}
         </nav>
 
         <div className="flex items-center gap-1">
@@ -146,6 +149,10 @@ export default function Navbar() {
                     <Link to="/profile" onClick={() => setDropOpen(false)}
                       className="flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-300 hover:text-gold hover:bg-gold/5 transition-colors">
                       <User size={14} /> My Profile
+                    </Link>
+                    <Link to="/profile#orders" onClick={() => setDropOpen(false)}
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-300 hover:text-gold hover:bg-gold/5 transition-colors">
+                      <Package size={14} /> My Orders
                     </Link>
                     {user.isAdmin && (
                       <Link to="/admin" onClick={() => setDropOpen(false)}
