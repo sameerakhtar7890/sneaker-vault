@@ -1,28 +1,36 @@
 import { Routes, Route } from 'react-router-dom';
-import Navbar from './components/Navbar.jsx';
-import Footer from './components/Footer.jsx';
-import CartDrawer from './components/CartDrawer.jsx';
-import Home from './pages/Home.jsx';
-import Shop from './pages/Shop.jsx';
-import Detail from './pages/Detail.jsx';
-import Checkout from './pages/Checkout.jsx';
-import Success from './pages/Success.jsx';
+import ProtectedRoute from './components/ProtectedRoute.jsx';
+import PublicLayout from './layouts/PublicLayout.jsx';
+
+import AdminLayout from './pages/admin/AdminLayout.jsx';
+import AdminDashboard from './pages/admin/AdminDashboard.jsx';
+import AdminProducts from './pages/admin/AdminProducts.jsx';
+import AdminOrders from './pages/admin/AdminOrders.jsx';
+import AdminCoupons from './pages/admin/AdminCoupons.jsx';
+import AdminSizeGuides from './pages/admin/AdminSizeGuides.jsx';
+import AdminReturns from './pages/admin/AdminReturns.jsx';
+import AdminNewsletter from './pages/admin/AdminNewsletter.jsx';
+import AdminSeo from './pages/admin/AdminSeo.jsx';
 
 export default function App() {
   return (
-    <div className="min-h-screen flex flex-col">
-      <Navbar />
-      <CartDrawer />
-      <main className="flex-1">
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/shop" element={<Shop />} />
-          <Route path="/product/:slug" element={<Detail />} />
-          <Route path="/checkout" element={<Checkout />} />
-          <Route path="/success" element={<Success />} />
-        </Routes>
-      </main>
-      <Footer />
-    </div>
+    <Routes>
+      <Route path="/admin" element={
+        <ProtectedRoute adminOnly>
+          <AdminLayout />
+        </ProtectedRoute>
+      }>
+        <Route index element={<AdminDashboard />} />
+        <Route path="products" element={<AdminProducts />} />
+        <Route path="orders" element={<AdminOrders />} />
+        <Route path="returns" element={<AdminReturns />} />
+        <Route path="coupons" element={<AdminCoupons />} />
+        <Route path="size-guides" element={<AdminSizeGuides />} />
+        <Route path="newsletter" element={<AdminNewsletter />} />
+        <Route path="seo" element={<AdminSeo />} />
+      </Route>
+
+      <Route path="/*" element={<PublicLayout />} />
+    </Routes>
   );
 }
