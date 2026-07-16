@@ -2,6 +2,30 @@ import asyncHandler from 'express-async-handler';
 import Product from '../models/Product.js';
 import StockAlert from '../models/StockAlert.js';
 import { sendBackInStockEmail } from '../utils/email.js';
+import { getRedisClient } from '../config/redis.js';
+
+const invalidateProductsCache = async () => {
+  const redisClient = getRedisClient();
+  if (redisClient && redisClient.isOpen) {
+    try {
+      let cursor = 0;
+      do {
+        const reply = await redisClient.scan(cursor, {
+          MATCH: 'products:*',
+          COUNT: 100
+        });
+        cursor = reply.cursor;
+        const keys = reply.keys;
+        if (keys && keys.length > 0) {
+          await redisClient.del(keys);
+        }
+      } while (cursor !== 0);
+      console.log('🧹 Redis products cache invalidated');
+    } catch (err) {
+      console.error('Failed to invalidate Redis cache:', err.message);
+    }
+  }
+};
 
 const SORT_MAP = {
   newest:     { createdAt: -1 },
@@ -13,6 +37,20 @@ const SORT_MAP = {
 
 export const listProducts = asyncHandler(async (req, res) => {
   const { brand, minPrice, maxPrice, size, q, featured, sort = 'newest', page = 1, limit = 12 } = req.query;
+
+  const redisClient = getRedisClient();
+  const cacheKey = `products:${JSON.stringify(req.query)}`;
+  if (redisClient && redisClient.isOpen) {
+    try {
+      const cached = await redisClient.get(cacheKey);
+      if (cached) {
+        return res.json(JSON.parse(cached));
+      }
+    } catch (err) {
+      console.error('Redis read error:', err.message);
+    }
+  }
+
   const filter = {};
   if (brand)    filter.brand = brand;
   if (size)     filter.sizes = Number(size);
@@ -33,7 +71,17 @@ export const listProducts = asyncHandler(async (req, res) => {
     .skip((pg - 1) * lmt)
     .limit(lmt);
     
-  res.json({ products, page: pg, pages: Math.ceil(count / lmt), total: count });
+  const result = { products, page: pg, pages: Math.ceil(count / lmt), total: count };
+
+  if (redisClient && redisClient.isOpen) {
+    try {
+      await redisClient.setEx(cacheKey, 3600, JSON.stringify(result));
+    } catch (err) {
+      console.error('Redis write error:', err.message);
+    }
+  }
+
+  res.json(result);
 });
 
 export const getProduct = asyncHandler(async (req, res) => {
@@ -44,6 +92,7 @@ export const getProduct = asyncHandler(async (req, res) => {
 
 export const createProduct = asyncHandler(async (req, res) => {
   const product = await Product.create(req.body);
+  await invalidateProductsCache();
   res.status(201).json(product);
 });
 
@@ -73,6 +122,7 @@ export const updateProduct = asyncHandler(async (req, res) => {
     }
   }
 
+  await invalidateProductsCache();
   res.json(updated);
 });
 
@@ -80,6 +130,7 @@ export const deleteProduct = asyncHandler(async (req, res) => {
   const product = await Product.findById(req.params.id);
   if (!product) { res.status(404); throw new Error('Product not found'); }
   await product.deleteOne();
+  await invalidateProductsCache();
   res.json({ message: 'Product deleted' });
 });
 
@@ -154,6 +205,7 @@ export const approveReview = asyncHandler(async (req, res) => {
   review.approved = true;
   updateProductRating(product);
   await product.save();
+  await invalidateProductsCache();
 
   res.json({ message: 'Review approved' });
 });
@@ -169,6 +221,7 @@ export const deleteReview = asyncHandler(async (req, res) => {
   product.reviews.pull(reviewId);
   updateProductRating(product);
   await product.save();
+  await invalidateProductsCache();
 
   res.json({ message: 'Review deleted' });
 });
@@ -301,6 +354,7 @@ export const importBulkCSV = asyncHandler(async (req, res) => {
   }
 
   const inserted = await Product.insertMany(productsToInsert);
+  await invalidateProductsCache();
 
   res.status(201).json({
     message: `Successfully imported ${inserted.length} products`,

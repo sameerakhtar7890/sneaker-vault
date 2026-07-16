@@ -3,6 +3,7 @@ import cors from 'cors';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
 import { connectDB } from './config/db.js';
+import { connectRedis } from './config/redis.js';
 import authRoutes from './routes/authRoutes.js';
 import productRoutes from './routes/productRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
@@ -29,6 +30,7 @@ import { errorHandler, notFound } from './middleware/errorMiddleware.js';
 
 dotenv.config();
 connectDB();
+connectRedis();
 
 const app = express();
 
