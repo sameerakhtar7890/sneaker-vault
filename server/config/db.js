@@ -7,6 +7,6 @@ export const connectDB = async () => {
     console.log('🟢 MongoDB connected');
   } catch (err) {
     console.error('Mongo error:', err.message);
-    process.exit(1);
+    // Don't process.exit(1) — it kills the Vercel serverless function permanently
   }
 };

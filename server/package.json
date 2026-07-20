@@ -23,9 +23,9 @@
     "nodemailer": "^8.0.10",
     "redis": "^6.1.0",
     "slugify": "^1.6.6",
-    "sneaker-vault": "file:..",
     "stripe": "^16.2.0"
   },
+
   "devDependencies": {
     "nodemon": "^3.1.4"
   }
