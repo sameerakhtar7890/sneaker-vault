@@ -19,7 +19,7 @@ const invalidateProductsCache = async () => {
         if (keys && keys.length > 0) {
           await redisClient.del(keys);
         }
-      } while (cursor !== 0);
+      } while (Number(cursor) !== 0);
       console.log('🧹 Redis products cache invalidated');
     } catch (err) {
       console.error('Failed to invalidate Redis cache:', err.message);
